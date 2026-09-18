@@ -176,6 +176,7 @@ export function startSync({ pairId, meUid, meProfile, setState, notify, setOnlin
     let prevSig = "";
     let lastNudgeAt = 0;
     let prevBoth = false;
+    let missingToastShown = false;
 
     const otherUid = () => {
       if (!pairData) return null;
@@ -310,7 +311,17 @@ export function startSync({ pairId, meUid, meProfile, setState, notify, setOnlin
       f.onSnapshot(
         f.doc(db, "pairs", pairId),
         (snap) => {
-          if (stopped || !snap.exists()) return;
+          if (stopped) return;
+          if (!snap.exists()) {
+            // Stale demo pair (created before Firebase) or deleted pair:
+            // tell the user to reset and re-pair instead of hanging offline.
+            setOnline(false);
+            if (!missingToastShown) {
+              missingToastShown = true;
+              notify.toast("Pair not found in cloud — reset demo and re-pair 💞");
+            }
+            return;
+          }
           pairData = snap.data();
           setOnline(true);
           merge();
