@@ -75,13 +75,13 @@ export async function fbJoinPair(code, name, timezone) {
   if (!inv.exists()) throw new Error("Invite not found — check the code 🔍");
   const { pairId } = inv.data();
   const pairRef = f.doc(db, "pairs", pairId);
-  const snap = await f.getDoc(pairRef);
-  if (!snap.exists()) throw new Error("That pair is gone — ask for a fresh code");
-  const d = snap.data();
-  const alreadyMember = d.user1 === user.uid || d.user2 === user.uid;
-  if (!alreadyMember) {
-    if (d.user2) throw new Error("This invite is already paired 💞");
+  // Claim the empty user2 slot directly — reads are members-only, so no
+  // pre-read (it would always be denied for a joiner).
+  try {
     await f.updateDoc(pairRef, { user2: user.uid, updatedAt: Date.now() });
+  } catch (e) {
+    if (e?.code === "not-found") throw new Error("That pair is gone — ask for a fresh code");
+    throw new Error("This invite is already paired 💞");
   }
   await f.deleteDoc(f.doc(db, "invites", code)).catch(() => {});
   await f.setDoc(
@@ -90,7 +90,7 @@ export async function fbJoinPair(code, name, timezone) {
     { merge: true }
   );
   saveFbLink({ uid: user.uid, pairId });
-  return { pairId, inviteCode: d.inviteCode || code };
+  return { pairId, inviteCode: code };
 }
 
 // ---------- writes (fire-and-forget from UI, optimistic local first) ----------

@@ -34,10 +34,10 @@ service cloud.firestore {
       allow update: if authed() && (
         // members can update shared fields
         resource.data.user1 == request.auth.uid || resource.data.user2 == request.auth.uid ||
-        // joining: claim the empty user2 slot, nothing else
+        // joining: claim the empty user2 slot (plus timestamp), nothing else
         (resource.data.user2 == null &&
          request.resource.data.user2 == request.auth.uid &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['user2']))
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['user2', 'updatedAt']))
       );
       allow delete: if false;
 
