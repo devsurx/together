@@ -1,0 +1,1060 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import DoodleCanvas from "./components/DoodleCanvas.jsx";
+import Onboarding from "./components/Onboarding.jsx";
+import Splash from "./components/Splash.jsx";
+import {
+  BOOT_QUOTES,
+  CONVERSATION_LIBRARY,
+  MOODS,
+  STATUSES,
+  TIMEZONES,
+  bootQuote,
+  fmtTime,
+  promptForDate,
+  todayKey,
+} from "./lib/content.js";
+import { isFirebaseConfigured, requestReminderPermission, scheduleLocalReminder } from "./lib/firebase.js";
+import { applyStreak, createPair, freshState, loadState, makeInviteCode, saveState } from "./lib/store.js";
+
+function timeAgo(ts) {
+  if (!ts) return "never";
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+function Petals({ burstKey }) {
+  const petals = useMemo(() => {
+    if (!burstKey) return [];
+    return Array.from({ length: 14 }, (_, i) => ({
+      id: `${burstKey}-${i}`,
+      left: Math.random() * 100,
+      delay: Math.random() * 0.5,
+      char: ["🌸", "🏵️", "💗", "🌺"][i % 4],
+    }));
+  }, [burstKey]);
+  if (!burstKey) return null;
+  return (
+    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+      {petals.map((p) => (
+        <span key={p.id} className="petal" style={{ left: `${p.left}%`, animationDelay: `${p.delay}s` }}>
+          {p.char}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function Lily({ size = 40, bloom = false }) {
+  return (
+    <img
+      src="/lily.svg"
+      alt="lily"
+      width={size}
+      height={size}
+      className={bloom ? "anim-lily-bloom" : undefined}
+      draggable={false}
+    />
+  );
+}
+
+function SectionTitle({ kicker, title, right }) {
+  return (
+    <div className="mb-3 flex items-end justify-between">
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-rose-300/80">{kicker}</div>
+        <h2 className="font-display text-xl text-rose-50">{title}</h2>
+      </div>
+      {right}
+    </div>
+  );
+}
+
+function AmbientBg() {
+  return (
+    <div className="pointer-events-none fixed inset-0 hidden overflow-hidden lg:block" aria-hidden>
+      <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,rgba(244,63,94,0.14),transparent_70%)]" />
+      <div className="absolute -left-32 top-1/4 h-96 w-96 rounded-full bg-rose-900/25 blur-[120px]" />
+      <div className="absolute -right-32 bottom-1/4 h-96 w-96 rounded-full bg-pink-800/20 blur-[120px]" />
+      <img src="/lily.svg" alt="" className="anim-drift absolute left-[8%] top-[12%] w-24 opacity-20 blur-[1px]" draggable={false} />
+      <img src="/lily.svg" alt="" className="anim-drift absolute bottom-[10%] right-[7%] w-36 opacity-15 blur-[2px]" style={{ animationDelay: "2s" }} draggable={false} />
+      <img src="/lily.svg" alt="" className="anim-drift absolute bottom-[24%] left-[4%] w-14 opacity-10" style={{ animationDelay: "4s" }} draggable={false} />
+    </div>
+  );
+}
+
+const HOW_STEPS = [
+  ["🌸", "One prompt a day", "Both answer → reveals together."],
+  ["😊", "Mood + streak", "Both check in → streak grows."],
+  ["💓", "Stay close", "Nudges, lamp, songs & doodles."],
+];
+
+function DefaultGlance() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="rounded-3xl border border-line bg-card p-5">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-rose-300/80">why it works</div>
+        <ul className="mt-2 space-y-2 text-xs leading-relaxed text-zinc-400">
+          <li>🌸 <b className="text-zinc-200">60 seconds a day</b> — built for busy days &amp; timezones.</li>
+          <li>🔒 <b className="text-zinc-200">Locked reveals</b> — answer honestly, no peeking.</li>
+          <li>🔥 <b className="text-zinc-200">Streaks + grace</b> — gentle, never guilty.</li>
+        </ul>
+      </div>
+      <div className="rounded-3xl border border-dashed border-rose-500/40 bg-card p-5 text-xs leading-relaxed text-rose-200">
+        📲 This is a PWA — on your phone, use <b>Share → Add to Home Screen</b> to install it like a native app.
+      </div>
+    </div>
+  );
+}
+
+// Desktop shell: mobile stays a single column; on lg+ screens the app sits
+// in a phone-like column with ambient backdrop + flanking panels.
+function Chrome({ children, glance }) {
+  return (
+    <div className="relative min-h-svh bg-ink">
+      <AmbientBg />
+      <div className="relative mx-auto flex w-full max-w-6xl items-stretch justify-center gap-10 lg:px-6">
+        <aside className="sticky top-0 hidden h-svh w-72 shrink-0 flex-col justify-center gap-5 self-start py-10 xl:flex">
+          <div className="flex items-center gap-3">
+            <img src="/lily.svg" width={40} height={40} alt="lily" draggable={false} />
+            <div>
+              <div className="font-display text-2xl text-rose-50">together</div>
+              <div className="text-[11px] uppercase tracking-[0.25em] text-zinc-500">for long-distance us</div>
+            </div>
+          </div>
+          <p className="text-sm italic leading-relaxed text-rose-200/80">“Miles apart, synced at heart.”</p>
+          <div className="space-y-2.5">
+            {HOW_STEPS.map(([emoji, title, text]) => (
+              <div key={title} className="flex gap-3 rounded-2xl border border-line bg-card p-3.5">
+                <span className="text-2xl">{emoji}</span>
+                <div>
+                  <div className="text-sm font-bold text-rose-50">{title}</div>
+                  <div className="text-xs text-zinc-400">{text}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-2xl border border-line bg-card p-4 text-xs leading-relaxed text-zinc-400">
+            📲 <b className="text-zinc-200">Tip:</b> open on your phone → Share → Add to Home Screen for the full app feel + daily reminder.
+          </div>
+        </aside>
+
+        <div className="min-h-svh w-full max-w-md shrink-0 bg-ink lg:border-x lg:border-line lg:shadow-[0_0_120px_-24px_rgba(244,63,94,0.45)]">
+          {children}
+        </div>
+
+        <aside className="sticky top-0 hidden h-svh w-72 shrink-0 flex-col justify-center self-start py-10 xl:flex">
+          {glance ?? <DefaultGlance />}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  const [state, setState] = useState(() => loadState());
+  const [booted, setBooted] = useState(false);
+  const [tab, setTab] = useState("today");
+  const [now, setNow] = useState(Date.now());
+  const [quote] = useState(() => bootQuote());
+  const [burstKey, setBurstKey] = useState(0);
+  const [toast, setToast] = useState("");
+  const [answerDraft, setAnswerDraft] = useState("");
+  const [installEvt, setInstallEvt] = useState(null);
+  const [convoIdx, setConvoIdx] = useState(0);
+  const [pairTab, setPairTab] = useState("create");
+  const [formName, setFormName] = useState("");
+  const [formTz, setFormTz] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
+  const [joinCode, setJoinCode] = useState("");
+  const [journalDraft, setJournalDraft] = useState("");
+  const [bucketDraft, setBucketDraft] = useState("");
+  const [songDraft, setSongDraft] = useState("");
+  const [showHelp, setShowHelp] = useState(false);
+
+  const burst = () => setBurstKey((k) => k + 1);
+  const say = (t) => {
+    setToast(t);
+    window.clearTimeout(say._t);
+    say._t = window.setTimeout(() => setToast(""), 2600);
+  };
+
+  useEffect(() => {
+    saveState(state);
+  }, [state]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setBooted(true), 1500);
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    const onBip = (e) => {
+      e.preventDefault();
+      setInstallEvt(e);
+    };
+    window.addEventListener("beforeinstallprompt", onBip);
+    return () => {
+      clearTimeout(t);
+      clearInterval(tick);
+      window.removeEventListener("beforeinstallprompt", onBip);
+    };
+  }, []);
+
+  // Local reminder stand-in for FCM
+  const reminderRef = useRef(null);
+  useEffect(() => {
+    if (!state.me?.reminderTime) return;
+    if (reminderRef.current) reminderRef.current();
+    reminderRef.current = scheduleLocalReminder(state.me.reminderTime, () => {
+      say("🌸 Daily prompt is ready — open Together!");
+      try {
+        if (Notification.permission === "granted") {
+          new Notification("Together 💗", { body: "Today's prompt is waiting for both of you." });
+        }
+      } catch { /* noop */ }
+    });
+    return () => reminderRef.current?.();
+  }, [state.me?.reminderTime]);
+
+  const patch = (fn) => setState((s) => fn(structuredClone(s)));
+
+  const showOnboarding = booted && (!state.seenTutorial || showHelp);
+  const closeTutorial = (msg) => {
+    patch((s) => {
+      s.seenTutorial = true;
+      return s;
+    });
+    setShowHelp(false);
+    if (msg) {
+      burst();
+      say(msg);
+    }
+  };
+
+  if (!booted) {
+    return <Splash quote={quote} />;
+  }
+
+  // ---------- Pairing gate ----------
+  if (!state.me || !state.pair) {
+    return (
+      <Chrome>
+      <div className="flex min-h-svh w-full flex-col px-6 pb-10 pt-14">
+        <Petals burstKey={burstKey} />
+        <div className="flex items-center gap-3">
+          <Lily size={44} />
+          <div>
+            <h1 className="font-display text-3xl text-rose-50">together</h1>
+            <p className="text-xs text-zinc-400">one prompt · one mood · one streak</p>
+          </div>
+        </div>
+        <p className="mt-6 text-sm italic text-rose-200/80">“{BOOT_QUOTES[Math.floor(now / 86400000) % BOOT_QUOTES.length]}”</p>
+
+        <div className="mt-6 grid grid-cols-2 gap-2 rounded-2xl border border-line bg-card p-1 text-sm">
+          {(["create", "join"]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setPairTab(t)}
+              className={`rounded-xl px-4 py-2.5 font-semibold ${pairTab === t ? "bg-rose-600 text-white" : "text-zinc-400"}`}
+            >
+              {t === "create" ? "Create invite" : "Join partner"}
+            </button>
+          ))}
+        </div>
+
+        <div className="anim-bloom-in mt-4 rounded-3xl border border-line bg-card p-5">
+          <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400">your name</label>
+          <input
+            value={formName}
+            onChange={(e) => setFormName(e.target.value)}
+            placeholder="e.g. Maya"
+            className="mt-2 w-full rounded-xl border border-line bg-coal px-3 py-2.5 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
+          />
+          <label className="mt-4 block text-xs font-semibold uppercase tracking-widest text-zinc-400">your timezone</label>
+          <select
+            value={formTz}
+            onChange={(e) => setFormTz(e.target.value)}
+            className="mt-2 w-full rounded-xl border border-line bg-coal px-3 py-2.5 text-sm outline-none focus:border-rose-500"
+          >
+            {TIMEZONES.map((z) => (
+              <option key={z} value={z}>{z}</option>
+            ))}
+          </select>
+
+          {pairTab === "join" && (
+            <>
+              <label className="mt-4 block text-xs font-semibold uppercase tracking-widest text-zinc-400">invite code</label>
+              <input
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                placeholder="e.g. KQ7M2P"
+                maxLength={6}
+                className="mt-2 w-full rounded-xl border border-line bg-coal px-3 py-2.5 text-sm uppercase tracking-[0.3em] outline-none placeholder:text-zinc-600 focus:border-rose-500"
+              />
+            </>
+          )}
+
+          <button
+            disabled={!formName.trim() || (pairTab === "join" && joinCode.trim().length < 4)}
+            onClick={() => {
+              if (pairTab === "create") {
+                const { me, pair } = createPair(formName.trim(), formTz);
+                patch((s) => {
+                  s.me = me;
+                  s.pair = pair;
+                  s.partner = null;
+                  s.points[me.uid] = 0;
+                  s.activity.unshift({ id: Date.now(), text: `${me.name} created invite ${pair.inviteCode}`, at: Date.now() });
+                  return s;
+                });
+                burst();
+                say("Invite created — share your code 💌");
+              } else {
+                // Demo join: accept any code, pair immediately with a waiting slot.
+                const code = joinCode.trim().toUpperCase();
+                patch((s) => {
+                  const me = {
+                    uid: `u_${Math.random().toString(36).slice(2, 8)}`,
+                    name: formName.trim(),
+                    timezone: formTz,
+                    status: "free",
+                    reminderTime: "09:00",
+                  };
+                  s.me = me;
+                  s.pair = { pairId: `pair_${code}`, inviteCode: code, streakCount: 0, lastCheckIn: null, forgiveUsed: false };
+                  s.partner = null;
+                  s.points[me.uid] = 0;
+                  s.activity.unshift({ id: Date.now(), text: `${me.name} joined with code ${code}`, at: Date.now() });
+                  return s;
+                });
+                say("Joined! Add your partner's name next 💗");
+              }
+            }}
+            className="mt-5 w-full rounded-2xl bg-rose-600 py-3 text-sm font-bold text-white disabled:opacity-40 active:scale-[0.98]"
+          >
+            {pairTab === "create" ? "Create our space 💗" : "Join with code 🔗"}
+          </button>
+
+          <button
+            onClick={() => {
+              const { me, pair } = createPair(formName.trim() || "You", formTz);
+              const p = { uid: `u_demo`, name: "Sam", timezone: "America/New_York", status: "free" };
+              patch((s) => {
+                s.me = me;
+                s.pair = pair;
+                s.partner = p;
+                s.points[me.uid] = 0;
+                s.points[p.uid] = 0;
+                s.activity.unshift({ id: Date.now(), text: `Demo pair created: ${me.name} + ${p.name}`, at: Date.now() });
+                return s;
+              });
+              burst();
+            }}
+            className="mt-2 w-full rounded-2xl border border-dashed border-rose-500/40 py-2.5 text-xs font-semibold text-rose-200"
+          >
+            ✨ just try the demo (pairs you with Sam)
+          </button>
+          <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
+            Real backend: invite codes map to <span className="text-zinc-300">pairs/{`{pairId}`}</span> in Firestore with
+            realtime sync + FCM. This build runs fully offline in demo mode
+            {isFirebaseConfigured ? " — Firebase env detected." : " (set VITE_FIREBASE_* to go live)."}
+          </p>
+        </div>
+        {showOnboarding && <Onboarding onClose={() => closeTutorial("Welcome in 💗")} />}
+      </div>
+      </Chrome>
+    );
+  }
+
+  const { me, partner, pair } = state;
+  const activeUid = state.viewingAs === "partner" && partner ? partner.uid : me.uid;
+  const activeName = state.viewingAs === "partner" && partner ? partner.name : me.name;
+  const dateKey = todayKey(me.timezone);
+  const prompt = promptForDate(dateKey);
+  const dayResponses = state.responses[dateKey] || {};
+  const meR = dayResponses[me.uid];
+  const partnerR = partner ? dayResponses[partner.uid] : undefined;
+  const activeR = dayResponses[activeUid];
+  const bothAnswered = Boolean(meR?.answer && partnerR?.answer);
+  const bothCheckedIn = Boolean(meR?.mood && partnerR?.mood);
+  const myMood = meR?.mood;
+
+  const daysToVisit = (() => {
+    if (!state.visit.date) return null;
+    const diff = Math.ceil((new Date(state.visit.date + "T12:00:00") - new Date()) / 86400000);
+    return diff;
+  })();
+
+  function ensureStreak(next) {
+    // next = cloned state after writing a mood; apply streak + rewards
+    const dk = todayKey(next.me.timezone);
+    const r = next.responses[dk] || {};
+    const a = r[next.me.uid]?.mood;
+    const b = next.partner ? r[next.partner.uid]?.mood : null;
+    if (a && b) {
+      const before = next.pair.streakCount;
+      next.pair = applyStreak(next.pair, dk, true, true);
+      if (next.pair.lastCheckIn === dk && next.pair.streakCount !== before) {
+        next.points[next.me.uid] = (next.points[next.me.uid] || 0) + 10;
+        if (next.partner) next.points[next.partner.uid] = (next.points[next.partner.uid] || 0) + 10;
+        next.activity.unshift({ id: Date.now(), text: `🔥 Streak day ${next.pair.streakCount} — both checked in`, at: Date.now() });
+      }
+    }
+    return next;
+  }
+
+  // Live "today at a glance" panel for wide desktop screens
+  const glancePanel = (
+    <div className="flex flex-col gap-4">
+      <div className="rounded-3xl border border-rose-500/25 bg-card p-5">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-rose-300/80">today at a glance</div>
+        <div className="font-display mt-2 text-5xl text-rose-50">
+          {pair.streakCount}
+          <span className="text-3xl">🔥</span>
+        </div>
+        <div className="mt-1 text-xs text-zinc-400">
+          {bothCheckedIn ? "both checked in 🌙" : "waiting on today's check-ins"}
+        </div>
+        <div className="mt-3 rounded-2xl bg-black/40 p-3 text-xs italic leading-relaxed text-zinc-300">
+          “{prompt}”
+        </div>
+        <div className="mt-2 flex justify-between text-xs text-zinc-400">
+          <span>{me.name}: {meR?.mood ? MOODS.find((m) => m.id === meR.mood)?.emoji : "—"}</span>
+          <span>{partner?.name || "partner"}: {partnerR?.mood ? MOODS.find((m) => m.id === partnerR.mood)?.emoji : "—"}</span>
+        </div>
+      </div>
+      {daysToVisit !== null && daysToVisit >= 0 && (
+        <div className="rounded-3xl border border-line bg-card p-5 text-center">
+          <div className="font-display text-4xl text-amber-200">{daysToVisit}</div>
+          <div className="text-[11px] uppercase tracking-[0.25em] text-zinc-500">days to next visit ✈️</div>
+        </div>
+      )}
+      <button
+        onClick={() => setShowHelp(true)}
+        className="rounded-2xl border border-line bg-card p-3 text-xs font-semibold text-zinc-300 hover:border-rose-500/50"
+      >
+        🌸 replay the tutorial
+      </button>
+    </div>
+  );
+
+  const setMood = (moodId) => {
+    patch((s) => {
+      s.responses[dateKey] = s.responses[dateKey] || {};
+      s.responses[dateKey][activeUid] = {
+        answer: s.responses[dateKey][activeUid]?.answer || "",
+        mood: moodId,
+        submittedAt: Date.now(),
+      };
+      return ensureStreak(s);
+    });
+  };
+
+  const submitAnswer = () => {
+    if (!answerDraft.trim()) return;
+    patch((s) => {
+      s.responses[dateKey] = s.responses[dateKey] || {};
+      const prev = s.responses[dateKey][activeUid] || {};
+      s.responses[dateKey][activeUid] = { ...prev, answer: answerDraft.trim(), submittedAt: Date.now() };
+      s.points[activeUid] = (s.points[activeUid] || 0) + 3;
+      s.activity.unshift({ id: Date.now(), text: `${activeName} answered today's prompt`, at: Date.now() });
+      return s;
+    });
+    setAnswerDraft("");
+    burst();
+    say(bothAnswered ? "Both answers revealed! 🌸" : "Locked in — waiting on your partner 🔒");
+  };
+
+  const nudge = () => {
+    patch((s) => {
+      s.nudges.unshift({ from: activeUid, fromName: activeName, at: Date.now() });
+      s.points[activeUid] = (s.points[activeUid] || 0) + 2;
+      return s;
+    });
+    burst();
+    say("Thinking-of-you sent 💓");
+    try {
+      navigator.vibrate?.(40);
+    } catch { /* noop */ }
+  };
+
+  const lastNudge = state.nudges[0];
+
+  return (
+    <Chrome glance={glancePanel}>
+    <div className="min-h-svh w-full bg-ink pb-28">
+      <Petals burstKey={burstKey} />
+      {/* header */}
+      <header className="sticky top-0 z-30 border-b border-line/70 bg-ink/90 backdrop-blur">
+        <div className="flex items-center gap-2 px-4 pt-4">
+          <Lily size={30} />
+          <div className="leading-tight">
+            <div className="font-display text-lg text-rose-50">together</div>
+            <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">{dateKey} · {promptForDate(dateKey).slice(0, 0) /* keep */}day {pair.streakCount} 🔥</div>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex rounded-full border border-line bg-card p-0.5 text-[11px]">
+              <button
+                onClick={() => patch((s) => { s.viewingAs = "me"; return s; })}
+                className={`rounded-full px-2.5 py-1 font-semibold ${state.viewingAs !== "partner" ? "bg-rose-600 text-white" : "text-zinc-400"}`}
+              >
+                {me.name}
+              </button>
+              <button
+                disabled={!partner}
+                onClick={() => patch((s) => { s.viewingAs = "partner"; return s; })}
+                className={`rounded-full px-2.5 py-1 font-semibold ${state.viewingAs === "partner" ? "bg-rose-600 text-white" : "text-zinc-400 disabled:opacity-40"}`}
+              >
+                {partner?.name || "…"}
+              </button>
+            </div>
+          </div>
+        </div>
+        {/* streak banner */}
+        <div className="px-4 pb-3 pt-2">
+          <div className="flex items-center gap-3 rounded-2xl border border-rose-500/25 bg-gradient-to-r from-rose-950/60 to-card px-4 py-3">
+            <span className="text-3xl">{pair.streakCount > 0 ? "🔥" : "🌱"}</span>
+            <div className="flex-1">
+              <div className="text-sm font-bold text-rose-50">
+                {pair.streakCount > 0 ? `${pair.streakCount}-day streak` : "Start your streak today"}
+                {pair.forgiveUsed && <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-rose-200">grace used 💧</span>}
+              </div>
+              <div className="text-[11px] text-zinc-400">
+                {bothCheckedIn ? "Both checked in — see you tomorrow 🌙" : "Both moods = +1 day. One miss is forgiven."}
+              </div>
+            </div>
+            <Lily size={30} bloom={bothCheckedIn} />
+          </div>
+        </div>
+      </header>
+
+      <main className="px-4 pt-4">
+        {tab === "today" && (
+          <div className="anim-bloom-in space-y-4" key={dateKey + tab}>
+            <p className="text-center text-xs italic text-rose-200/70">answering as <b>{activeName}</b> (demo switch in header)</p>
+
+            {/* daily prompt */}
+            <section className="rounded-3xl border border-line bg-card p-5">
+              <SectionTitle
+                kicker="daily prompt"
+                title="One question, two hearts"
+                right={<span className="text-[11px] text-zinc-500">{bothAnswered ? "🌸 revealed" : "🔒 locked"}</span>}
+              />
+              <p className="font-display text-lg leading-snug text-rose-50">“{prompt}”</p>
+
+              {!bothAnswered ? (
+                <>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className={`rounded-xl border px-3 py-2 ${meR?.answer ? "border-emerald-500/40 text-emerald-200" : "border-line text-zinc-400"}`}>
+                      {me.name}: {meR?.answer ? "answered ✓" : "waiting…"}
+                    </div>
+                    <div className={`rounded-xl border px-3 py-2 ${partnerR?.answer ? "border-emerald-500/40 text-emerald-200" : "border-line text-zinc-400"}`}>
+                      {partner?.name || "partner"}: {partnerR?.answer ? "answered ✓" : "waiting…"}
+                    </div>
+                  </div>
+                  {!partner && (
+                    <div className="mt-3 rounded-xl border border-dashed border-rose-500/40 p-3 text-xs text-rose-200">
+                      No partner linked yet — invite code <b className="tracking-[0.2em]">{pair.inviteCode}</b>. Add them below, or answer solo for now.
+                    </div>
+                  )}
+                  {activeR?.answer ? (
+                    <p className="mt-3 rounded-xl bg-black/40 p-3 text-center text-sm text-zinc-300">
+                      Your answer is sealed 🤫 — it reveals when you both answer.
+                    </p>
+                  ) : (
+                    <div className="mt-3">
+                      <textarea
+                        value={answerDraft}
+                        onChange={(e) => setAnswerDraft(e.target.value)}
+                        rows={3}
+                        placeholder={`Answer as ${activeName}…`}
+                        className="w-full rounded-xl border border-line bg-coal px-3 py-2.5 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
+                      />
+                      <button
+                        onClick={submitAnswer}
+                        disabled={!answerDraft.trim()}
+                        className="mt-2 w-full rounded-2xl bg-rose-600 py-2.5 text-sm font-bold text-white disabled:opacity-40 active:scale-[0.98]"
+                      >
+                        Seal my answer 🔒
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="mt-3 space-y-2">
+                  {[me, partner].filter(Boolean).map((p) => (
+                    <div key={p.uid} className="rounded-2xl border border-rose-500/20 bg-black/40 p-3">
+                      <div className="text-[11px] font-bold uppercase tracking-widest text-rose-300">{p.name}</div>
+                      <div className="mt-1 text-sm leading-relaxed text-zinc-100">{dayResponses[p.uid]?.answer}</div>
+                    </div>
+                  ))}
+                  <p className="text-center text-[11px] text-zinc-500">simultaneous reveal 🌸 +3 pts each</p>
+                </div>
+              )}
+            </section>
+
+            {/* mood */}
+            <section className="rounded-3xl border border-line bg-card p-5">
+              <SectionTitle kicker="mood check-in" title={`How is ${activeName} today?`} />
+              <div className="grid grid-cols-5 gap-2">
+                {MOODS.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setMood(m.id)}
+                    className={`rounded-2xl border py-3 text-2xl transition active:scale-90 ${activeR?.mood === m.id ? "border-rose-500 bg-rose-600/20 scale-105" : "border-line bg-coal"}`}
+                    title={m.label}
+                  >
+                    {m.emoji}
+                    <div className="mt-1 text-[9px] text-zinc-400">{m.label}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center justify-between text-[11px] text-zinc-500">
+                <span>{me.name}: {meR ? MOODS.find((m) => m.id === meR.mood)?.emoji : "—"}</span>
+                <span>{partner?.name || "partner"}: {partnerR ? MOODS.find((m) => m.id === partnerR.mood)?.emoji : "—"}</span>
+              </div>
+            </section>
+
+            {/* partner linking */}
+            {!partner && (
+              <section className="rounded-3xl border border-dashed border-rose-500/40 bg-card p-5">
+                <SectionTitle kicker="pairing" title="Link your partner" />
+                <PartnerForm
+                  onAdd={(name, tz) => {
+                    patch((s) => {
+                      const p = { uid: `u_${Math.random().toString(36).slice(2, 8)}`, name, timezone: tz, status: "free" };
+                      s.partner = p;
+                      s.points[p.uid] = 0;
+                      s.activity.unshift({ id: Date.now(), text: `${p.name} linked via code ${s.pair.inviteCode}`, at: Date.now() });
+                      return s;
+                    });
+                    burst();
+                    say("Paired! 💞");
+                  }}
+                />
+                <p className="mt-2 text-center text-xs text-zinc-500">Your invite code: <b className="tracking-[0.3em] text-rose-200">{pair.inviteCode}</b></p>
+              </section>
+            )}
+
+            {/* activity */}
+            <section className="rounded-3xl border border-line bg-card p-5">
+              <SectionTitle kicker="us lately" title="Tiny history" />
+              {state.activity.length === 0 && <p className="text-xs text-zinc-500">Nothing yet — today is day one 🌱</p>}
+              <ul className="space-y-1.5">
+                {state.activity.slice(0, 6).map((a) => (
+                  <li key={a.id} className="flex justify-between gap-2 text-xs text-zinc-400">
+                    <span>{a.text}</span>
+                    <span className="shrink-0 text-zinc-600">{timeAgo(a.at)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+        )}
+
+        {tab === "connect" && (
+          <div className="anim-bloom-in space-y-4" key={tab}>
+            {/* thinking of you */}
+            <section className="rounded-3xl border border-rose-500/25 bg-gradient-to-b from-rose-950/50 to-card p-5 text-center">
+              <SectionTitle kicker="presence" title="Thinking of you" />
+              <button
+                onClick={nudge}
+                className="thinking-glow mx-auto block h-28 w-28 rounded-full bg-gradient-to-b from-rose-500 to-rose-700 text-4xl active:scale-90"
+                aria-label="Send thinking of you"
+              >
+                💓
+              </button>
+              <p className="mt-3 text-xs text-zinc-400">
+                tap to buzz {partner?.name || "your partner"} instantly
+                {lastNudge && <span className="block mt-1">last: {lastNudge.fromName} · {timeAgo(lastNudge.at)} (+2 pts)</span>}
+              </p>
+              {/* virtual lamp */}
+              <button
+                onClick={() => {
+                  patch((s) => {
+                    s.lamp = s.lamp.litBy === activeUid ? { litBy: null, at: Date.now() } : { litBy: activeUid, at: Date.now() };
+                    return s;
+                  });
+                  burst();
+                }}
+                className={`mt-4 w-full rounded-2xl border py-3 text-sm font-semibold ${state.lamp.litBy ? "border-amber-300/50 bg-amber-300/10 text-amber-200" : "border-line bg-coal text-zinc-300"}`}
+              >
+                {state.lamp.litBy ? `💡 lamp is lit ${state.lamp.litBy === activeUid ? "by you" : `by ${(state.lamp.litBy === me.uid ? me.name : partner?.name)}`} — tap to dim` : "🏮 tap to light our lamp"}
+              </button>
+            </section>
+
+            {/* timezones + status */}
+            <section className="rounded-3xl border border-line bg-card p-5">
+              <SectionTitle kicker="two clocks" title="Local time" right={<span className="text-[11px] tabular-nums text-zinc-500">{new Date(now).toLocaleTimeString()}</span>} />
+              <div className="grid grid-cols-2 gap-2">
+                {[{ n: me.name, tz: me.timezone, who: "me" }, { n: partner?.name || "partner", tz: partner?.timezone || me.timezone, who: "partner" }].map((c) => (
+                  <div key={c.who} className="rounded-2xl border border-line bg-coal p-3 text-center">
+                    <div className="text-[11px] uppercase tracking-widest text-zinc-500">{c.n}</div>
+                    <div className="font-display text-2xl text-rose-50">{fmtTime(c.tz)}</div>
+                    <div className="truncate text-[10px] text-zinc-500">{c.tz}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-xs">
+                <span className="text-zinc-400">{activeName} is…</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {STATUSES.map((st) => {
+                    const cur = state.viewingAs === "partner" && partner ? partner.status : me.status;
+                    return (
+                      <button
+                        key={st}
+                        onClick={() => patch((s) => {
+                          if (s.viewingAs === "partner" && s.partner) s.partner.status = st;
+                          else s.me.status = st;
+                          return s;
+                        })}
+                        className={`rounded-full px-2.5 py-1 font-semibold ${cur === st ? "bg-rose-600 text-white" : "border border-line text-zinc-400"}`}
+                      >
+                        {st}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] text-zinc-500">
+                {me.name} is <b className="text-zinc-300">{me.status}</b> · {partner?.name || "partner"} is <b className="text-zinc-300">{partner?.status || "…"}</b> — no need to ask “are you busy?”
+              </p>
+            </section>
+
+            {/* song of the day */}
+            <section className="rounded-3xl border border-line bg-card p-5">
+              <SectionTitle kicker="music" title="Song of the day 🎶" />
+              {state.song.title ? (
+                <p className="rounded-xl bg-black/40 p-3 text-sm text-zinc-200">
+                  🎧 <b>{state.song.title}</b> <span className="text-zinc-500">— shared by {state.song.by} · {timeAgo(state.song.at)}</span>
+                </p>
+              ) : (
+                <p className="text-xs text-zinc-500">No song yet today. Trade one track each.</p>
+              )}
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={songDraft}
+                  onChange={(e) => setSongDraft(e.target.value)}
+                  placeholder="Artist — Title"
+                  className="flex-1 rounded-xl border border-line bg-coal px-3 py-2 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
+                />
+                <button
+                  onClick={() => {
+                    if (!songDraft.trim()) return;
+                    patch((s) => {
+                      s.song = { title: songDraft.trim(), by: activeName, at: Date.now() };
+                      s.points[activeUid] = (s.points[activeUid] || 0) + 2;
+                      return s;
+                    });
+                    setSongDraft("");
+                    burst();
+                  }}
+                  className="rounded-xl bg-rose-600 px-4 text-sm font-bold text-white active:scale-95"
+                >
+                  share
+                </button>
+              </div>
+            </section>
+
+            {/* conversation library */}
+            <section className="rounded-3xl border border-line bg-card p-5">
+              <SectionTitle
+                kicker="go deeper"
+                title="Conversation deck"
+                right={<button onClick={() => setConvoIdx((i) => (i + 1) % CONVERSATION_LIBRARY.length)} className="rounded-full border border-line px-3 py-1 text-[11px] text-zinc-300">shuffle ⟳</button>}
+              />
+              <p className="font-display text-base italic leading-relaxed text-rose-100">“{CONVERSATION_LIBRARY[convoIdx]}”</p>
+            </section>
+          </div>
+        )}
+
+        {tab === "doodle" && (
+          <div className="anim-bloom-in space-y-4" key={tab}>
+            <section className="rounded-3xl border border-line bg-card p-5">
+              <SectionTitle kicker="doodle tab ✍️" title={`Scribble for ${partner?.name || "your love"}`} />
+              <DoodleCanvas
+                onSend={(img, caption) => {
+                  patch((s) => {
+                    s.doodles.unshift({ id: Date.now(), by: activeUid, byName: activeName, img, caption, at: Date.now() });
+                    s.points[activeUid] = (s.points[activeUid] || 0) + 5;
+                    s.activity.unshift({ id: Date.now() + 1, text: `${activeName} sent a doodle 🌸`, at: Date.now() });
+                    return s;
+                  });
+                  burst();
+                  say("Doodle sent 🌸");
+                }}
+              />
+            </section>
+            <section className="rounded-3xl border border-line bg-card p-5">
+              <SectionTitle kicker="scrapbook" title={`Shared feed (${state.doodles.length})`} />
+              {state.doodles.length === 0 && <p className="text-xs text-zinc-500">No doodles yet — draw a crooked heart. It counts. 💗</p>}
+              <div className="space-y-3">
+                {state.doodles.map((d) => (
+                  <div key={d.id} className="overflow-hidden rounded-2xl border border-line">
+                    <img src={d.img} alt={`doodle by ${d.byName}`} className="w-full" />
+                    <div className="flex items-center justify-between bg-coal px-3 py-2 text-[11px] text-zinc-400">
+                      <span>{d.byName} · {d.caption || "untitled"} </span>
+                      <span>{timeAgo(d.at)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {tab === "us" && (
+          <div className="anim-bloom-in space-y-4" key={tab}>
+            {/* countdown */}
+            <section className="rounded-3xl border border-rose-500/25 bg-gradient-to-b from-rose-950/50 to-card p-5 text-center">
+              <SectionTitle kicker="countdown ✈️" title="Next visit" />
+              {daysToVisit === null && <p className="text-xs text-zinc-400">Set the date you're together again.</p>}
+              {daysToVisit !== null && daysToVisit >= 0 && (
+                <div className="py-2">
+                  <div className="font-display text-6xl text-rose-50">{daysToVisit}</div>
+                  <div className="text-xs uppercase tracking-[0.3em] text-rose-200">days to go</div>
+                  {daysToVisit <= 7 && <div className="mt-2 text-sm">🎉 so close — milestone unlocked!</div>}
+                  {daysToVisit > 7 && daysToVisit <= 30 && <div className="mt-2 text-sm">🌙 one month energy — plan one date idea.</div>}
+                </div>
+              )}
+              {daysToVisit !== null && daysToVisit < 0 && <p className="text-sm">💗 You were together recently — add the next one!</p>}
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="date"
+                  value={state.visit.date}
+                  onChange={(e) => patch((s) => { s.visit.date = e.target.value; return s; })}
+                  className="flex-1 rounded-xl border border-line bg-coal px-3 py-2 text-sm text-zinc-200 outline-none focus:border-rose-500"
+                />
+              </div>
+              <input
+                value={state.visit.note}
+                onChange={(e) => patch((s) => { s.visit.note = e.target.value; return s; })}
+                placeholder="plan note… e.g. Maya flies Friday ✈️"
+                className="mt-2 w-full rounded-xl border border-line bg-coal px-3 py-2 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
+              />
+            </section>
+
+            {/* points */}
+            <section className="rounded-3xl border border-line bg-card p-5">
+              <SectionTitle kicker="tiny rewards" title="Points toward us" />
+              <div className="grid grid-cols-2 gap-2 text-center">
+                {[me, partner].filter(Boolean).map((p) => (
+                  <div key={p.uid} className="rounded-2xl border border-line bg-coal p-3">
+                    <div className="text-[11px] uppercase tracking-widest text-zinc-500">{p.name}</div>
+                    <div className="font-display text-3xl text-amber-200">{state.points[p.uid] || 0}</div>
+                    <div className="text-[10px] text-zinc-500">pts</div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-[11px] text-zinc-500">check-in together +10 · answer +3 · nudge +2 · doodle/journal +5 → spend on planning the next visit 🌸</p>
+            </section>
+
+            {/* journal */}
+            <section className="rounded-3xl border border-line bg-card p-5">
+              <SectionTitle kicker="journal" title="Photo-less timeline (v1)" />
+              <div className="flex gap-2">
+                <input
+                  value={journalDraft}
+                  onChange={(e) => setJournalDraft(e.target.value)}
+                  placeholder={`Note as ${activeName}… “missing your laugh today”`}
+                  className="flex-1 rounded-xl border border-line bg-coal px-3 py-2 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
+                />
+                <button
+                  onClick={() => {
+                    if (!journalDraft.trim()) return;
+                    patch((s) => {
+                      s.journal.unshift({ id: Date.now(), by: activeUid, byName: activeName, text: journalDraft.trim(), at: Date.now() });
+                      s.points[activeUid] = (s.points[activeUid] || 0) + 5;
+                      return s;
+                    });
+                    setJournalDraft("");
+                    burst();
+                  }}
+                  className="rounded-xl bg-rose-600 px-4 text-sm font-bold text-white active:scale-95"
+                >
+                  save
+                </button>
+              </div>
+              <ul className="mt-3 space-y-2">
+                {state.journal.map((j) => (
+                  <li key={j.id} className="rounded-xl border border-line bg-coal p-3 text-sm">
+                    <span className="text-zinc-200">{j.text}</span>
+                    <span className="mt-1 block text-[10px] text-zinc-500">{j.byName} · {timeAgo(j.at)} · vibe: {j.text.length > 80 ? "reflective 🌙" : j.text.match(/love|miss|adore/i) ? "tender 💗" : "light ✨"}</span>
+                  </li>
+                ))}
+                {state.journal.length === 0 && <li className="text-xs text-zinc-500">Empty page. Write the first line of today. ✍️</li>}
+              </ul>
+            </section>
+
+            {/* bucket */}
+            <section className="rounded-3xl border border-line bg-card p-5">
+              <SectionTitle kicker="someday" title="Bucket list 🪣" />
+              <div className="flex gap-2">
+                <input
+                  value={bucketDraft}
+                  onChange={(e) => setBucketDraft(e.target.value)}
+                  placeholder="e.g. sunrise picnic when we're together"
+                  className="flex-1 rounded-xl border border-line bg-coal px-3 py-2 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
+                />
+                <button
+                  onClick={() => {
+                    if (!bucketDraft.trim()) return;
+                    patch((s) => {
+                      s.bucket.unshift({ id: Date.now(), text: bucketDraft.trim(), done: false });
+                      return s;
+                    });
+                    setBucketDraft("");
+                  }}
+                  className="rounded-xl bg-rose-600 px-4 text-sm font-bold text-white active:scale-95"
+                >
+                  add
+                </button>
+              </div>
+              <ul className="mt-3 space-y-1.5">
+                {state.bucket.map((b) => (
+                  <li key={b.id} className="flex items-center gap-2 text-sm">
+                    <button
+                      onClick={() => patch((s) => {
+                        const it = s.bucket.find((x) => x.id === b.id);
+                        if (it) it.done = !it.done;
+                        return s;
+                      })}
+                      className={`flex h-6 w-6 items-center justify-center rounded-full border ${b.done ? "border-emerald-400 bg-emerald-400/20" : "border-line"}`}
+                    >
+                      {b.done ? "✓" : ""}
+                    </button>
+                    <span className={b.done ? "text-zinc-500 line-through" : "text-zinc-200"}>{b.text}</span>
+                  </li>
+                ))}
+                {state.bucket.length === 0 && <li className="text-xs text-zinc-500">No dreams listed yet — add one date idea for “when we're together”.</li>}
+              </ul>
+            </section>
+
+            {/* settings */}
+            <section className="rounded-3xl border border-line bg-card p-5 text-sm">
+              <SectionTitle kicker="settings" title="Reminders & app" />
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-400">Daily reminder at</span>
+                <input
+                  type="time"
+                  value={me.reminderTime || "09:00"}
+                  onChange={(e) => patch((s) => { s.me.reminderTime = e.target.value; return s; })}
+                  className="rounded-lg border border-line bg-coal px-2 py-1 text-sm outline-none"
+                />
+                <button
+                  onClick={async () => {
+                    const r = await requestReminderPermission();
+                    say(r === "granted" ? "Reminders on 🔔" : `Notifications: ${r}`);
+                  }}
+                  className="ml-auto rounded-xl border border-line px-3 py-1.5 text-xs text-zinc-300"
+                >
+                  enable 🔔
+                </button>
+              </div>
+              {installEvt && (
+                <button
+                  onClick={async () => {
+                    installEvt.prompt();
+                    setInstallEvt(null);
+                  }}
+                  className="mt-3 w-full rounded-2xl bg-rose-600 py-2.5 text-sm font-bold text-white"
+                >
+                  Install Together to home screen 📲
+                </button>
+              )}
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <button
+                  onClick={() => {
+                    const code = makeInviteCode();
+                    patch((s) => { s.pair.inviteCode = code; return s; });
+                    say("New invite code generated 🔗");
+                  }}
+                  className="rounded-xl border border-line py-2 text-zinc-300"
+                >
+                  regenerate code 🔗
+                </button>
+                <button
+                  onClick={() => {
+                    if (!window.confirm("Reset demo data?")) return;
+                    const f = freshState();
+                    setState(f);
+                  }}
+                  className="rounded-xl border border-red-500/40 py-2 text-red-300"
+                >
+                  reset demo
+                </button>
+              </div>
+              <button
+                onClick={() => setShowHelp(true)}
+                className="mt-2 w-full rounded-xl border border-line py-2 text-zinc-300"
+              >
+                how does this work? replay tutorial 🌸
+              </button>
+              <p className="mt-3 text-[11px] text-zinc-600">
+                Pair <span className="text-zinc-400">{pair.pairId}</span> · invite <b className="tracking-[0.2em] text-zinc-300">{pair.inviteCode}</b> · backend: {isFirebaseConfigured ? "Firebase ✓" : "local demo"} · FCM: local stand-in (see src/lib/firebase.js)
+              </p>
+            </section>
+          </div>
+        )}
+      </main>
+
+      {/* bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-line/70 bg-ink/95 backdrop-blur lg:left-1/2 lg:right-auto lg:w-full lg:max-w-md lg:-translate-x-1/2 lg:rounded-t-[1.75rem] lg:border lg:border-b-0 lg:border-line/70 lg:shadow-[0_-12px_60px_-15px_rgba(244,63,94,0.4)]">
+        <div className="mx-auto grid w-full max-w-md grid-cols-4 px-2 pb-[env(safe-area-inset-bottom)]">
+          {[
+            { id: "today", icon: "🌸", label: "Today" },
+            { id: "connect", icon: "💓", label: "Connect" },
+            { id: "doodle", icon: "✍️", label: "Doodle" },
+            { id: "us", icon: "🌙", label: "Us" },
+          ].map((t) => (
+            <button
+              key={t.id}
+              onClick={() => { setTab(t.id); window.scrollTo({ top: 0 }); }}
+              className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-semibold ${tab === t.id ? "text-rose-300" : "text-zinc-500"}`}
+            >
+              <span className="text-xl">{t.icon}</span>
+              {t.label}
+              {tab === t.id && <span className="h-1 w-6 rounded-full bg-rose-500" />}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {toast && (
+        <div className="anim-bloom-in fixed bottom-24 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-full border border-rose-500/30 bg-black/90 px-4 py-2 text-xs font-semibold text-rose-100 shadow-xl">
+          {toast}
+        </div>
+      )}
+      {showOnboarding && <Onboarding onClose={() => closeTutorial("You're all set 💗")} />}
+    </div>
+    </Chrome>
+  );
+}
+
+function PartnerForm({ onAdd }) {
+  const [name, setName] = useState("");
+  const [tz, setTz] = useState("America/New_York");
+  return (
+    <div>
+      <div className="flex gap-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Partner's name"
+          className="flex-1 rounded-xl border border-line bg-coal px-3 py-2 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
+        />
+        <button
+          disabled={!name.trim()}
+          onClick={() => { onAdd(name.trim(), tz); setName(""); }}
+          className="rounded-xl bg-rose-600 px-4 text-sm font-bold text-white disabled:opacity-40 active:scale-95"
+        >
+          link 💞
+        </button>
+      </div>
+      <select value={tz} onChange={(e) => setTz(e.target.value)} className="mt-2 w-full rounded-xl border border-line bg-coal px-3 py-2 text-xs outline-none">
+        {TIMEZONES.map((z) => (
+          <option key={z} value={z}>{z}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
