@@ -61,7 +61,7 @@ export async function fbCreatePair(name, timezone) {
   });
   await f.setDoc(
     f.doc(db, "users", user.uid),
-    { name, timezone, status: "free", reminderTime: "09:00", updatedAt: now },
+    { name, timezone, status: "free", reminderTime: "09:00", pairId: pairRef.id, updatedAt: now },
     { merge: true }
   );
   saveFbLink({ uid: user.uid, pairId: pairRef.id });
@@ -86,7 +86,7 @@ export async function fbJoinPair(code, name, timezone) {
   await f.deleteDoc(f.doc(db, "invites", code)).catch(() => {});
   await f.setDoc(
     f.doc(db, "users", user.uid),
-    { name, timezone, status: "free", reminderTime: "09:00", updatedAt: Date.now() },
+    { name, timezone, status: "free", reminderTime: "09:00", pairId, updatedAt: Date.now() },
     { merge: true }
   );
   saveFbLink({ uid: user.uid, pairId });

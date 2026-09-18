@@ -19,6 +19,9 @@ export const isFirebaseConfigured = Boolean(
   firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId && firebaseConfig.appId
 );
 
+// VAPID key is what makes push registration possible (separate from sync).
+export const hasVapid = Boolean(import.meta.env.VITE_FIREBASE_VAPID_KEY || "");
+
 let cached = null;
 
 export async function getFirebaseAsync() {

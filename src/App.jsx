@@ -13,7 +13,7 @@ import {
   promptForDate,
   todayKey,
 } from "./lib/content.js";
-import { isFirebaseConfigured, getFcmToken, onForegroundMessage, requestReminderPermission, scheduleLocalReminder } from "./lib/firebase.js";
+import { isFirebaseConfigured, hasVapid, getFcmToken, onForegroundMessage, requestReminderPermission, scheduleLocalReminder } from "./lib/firebase.js";
 import { fbCreatePair, fbJoinPair, fbWriteDay, fbWriteMe, fbWritePair, loadFbLink, startSync } from "./lib/sync.js";
 import { hashPin, makeSalt } from "./lib/lock.js";
 import { applyStreak, createPair, freshState, loadState, saveState } from "./lib/store.js";
@@ -192,6 +192,13 @@ export default function App() {
   const [bucketDraft, setBucketDraft] = useState("");
   const [showHelp, setShowHelp] = useState(false);
   const [pairBusy, setPairBusy] = useState(false);
+  const [pushOn, setPushOn] = useState(() => {
+    try {
+      return localStorage.getItem("together.v1.push") === "1";
+    } catch {
+      return false;
+    }
+  });
   const [locked, setLocked] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("together.v1.state"))?.lock?.enabled || false;
@@ -1088,6 +1095,10 @@ export default function App() {
                         const token = await getFcmToken();
                         await fbWriteMe(me.uid, { fcmToken: token, reminderTime: me.reminderTime || "09:00" });
                         say("Push registered on this device 📲");
+                        try {
+                          localStorage.setItem("together.v1.push", "1");
+                        } catch { /* noop */ }
+                        setPushOn(true);
                       } catch {
                         say("Couldn't turn on push for this device yet");
                       }
@@ -1098,6 +1109,16 @@ export default function App() {
                   enable 🔔
                 </button>
               </div>
+              <p className="mt-2 text-[11px] text-zinc-500">
+                Push status:{" "}
+                {pushOn ? (
+                  <b className="text-emerald-300">on for this phone ✓</b>
+                ) : fbMode && !hasVapid ? (
+                  "not set up yet — coming soon"
+                ) : (
+                  "off"
+                )}
+              </p>
               <div className="mt-4 rounded-2xl border border-line bg-coal p-3">
                 <div className="text-xs font-bold text-zinc-200">
                   🔒 App lock {state.lock?.enabled ? "is on" : "is off"}

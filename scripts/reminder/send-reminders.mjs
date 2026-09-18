@@ -85,11 +85,16 @@ if (!q.ok) {
   process.exit(1);
 }
 
+const DB = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)`;
+const FCM_URL = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+
+const usersSeen = [];
 for (const row of await q.json()) {
   const doc = row.document;
   if (!doc) continue;
   const uid = doc.name.split("/").pop();
   const f = doc.fields || {};
+  usersSeen.push({ uid, name: doc.name, f });
   const fcm = str(f, "fcmToken");
   const rt = str(f, "reminderTime");
   const tz = str(f, "timezone") || "UTC";
@@ -122,6 +127,97 @@ for (const row of await q.json()) {
         body: JSON.stringify({ fields: { fcmToken: { stringValue: "" } } }),
       });
     }
+  }
+}
+
+// ---- streak-at-risk: after 21:00 local, partner checked in but you haven't ----
+const pairCache = new Map();
+async function pairFor(uid) {
+  if (pairCache.has(uid)) return pairCache.get(uid);
+  let found = null;
+  for (const field of ["user1", "user2"]) {
+    const r = await fetch(`${DB}/documents:runQuery`, {
+      method: "POST",
+      headers: H,
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: "pairs" }],
+          where: { fieldFilter: { field: { fieldPath: field }, op: "EQUAL", value: { stringValue: uid } } },
+          limit: 1,
+        },
+      }),
+    });
+    if (!r.ok) break;
+    const rows = await r.json();
+    if (rows[0]?.document) {
+      found = { id: rows[0].document.name.split("/").pop(), fields: rows[0].document.fields || {} };
+      break;
+    }
+  }
+  pairCache.set(uid, found);
+  return found;
+}
+
+for (const u of usersSeen) {
+  const fcm = str(u.f, "fcmToken");
+  if (!fcm) continue;
+  const tz = str(u.f, "timezone") || "UTC";
+  const parts = localParts(now, tz);
+  if (!parts || Number(parts.hm.slice(0, 2)) < 21) continue; // evenings only
+  if (str(u.f, "lastRiskNudge") === parts.date) continue;
+
+  // resolve pair (fast path: pairId on the user doc)
+  let pairId = str(u.f, "pairId");
+  let pf = null;
+  if (pairId) {
+    const pr = await fetch(`${DB}/documents/pairs/${pairId}`, { headers: H });
+    if (pr.ok) pf = (await pr.json()).fields || {};
+    else pairId = null;
+  }
+  if (!pairId) {
+    const found = await pairFor(u.uid);
+    if (!found) continue;
+    pairId = found.id;
+    pf = found.fields;
+  }
+  const user1 = str(pf, "user1");
+  const user2 = str(pf, "user2");
+  if (!user2) continue; // not paired yet
+  const other = user1 === u.uid ? user2 : user1;
+
+  const dr = await fetch(`${DB}/documents/pairs/${pairId}/days/${parts.date}`, { headers: H });
+  let ups = {};
+  if (dr.ok) ups = (await dr.json()).fields?.updates?.mapValue?.fields || {};
+  const moodOf = (id) => ups[id]?.mapValue?.fields?.mood?.stringValue;
+  if (moodOf(u.uid) || !moodOf(other)) continue; // done, or nothing to save
+
+  let partnerName = "Your person";
+  const on = await fetch(`${DB}/documents/users/${other}`, { headers: H });
+  if (on.ok) partnerName = str((await on.json()).fields || {}, "name") || partnerName;
+
+  const send2 = await fetch(FCM_URL, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({
+      message: {
+        token: fcm,
+        data: {
+          title: "Together 🔥",
+          body: `${partnerName} already checked in — 30 seconds to save the streak`,
+          link: "/",
+        },
+      },
+    }),
+  });
+  if (send2.ok) {
+    await fetch(`https://firestore.googleapis.com/v1/${u.name}?updateMask.fieldPaths=lastRiskNudge`, {
+      method: "PATCH",
+      headers: H,
+      body: JSON.stringify({ fields: { lastRiskNudge: { stringValue: parts.date } } }),
+    });
+    console.log(`risk nudge ${u.uid} (${parts.date})`);
+  } else {
+    console.error(`risk send failed for ${u.uid}: ${send2.status} ${await send2.text()}`);
   }
 }
 
