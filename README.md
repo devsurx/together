@@ -14,8 +14,8 @@ A lightweight, mobile-first **Progressive Web App (PWA)** for long-distance coup
 **Connection & presence**
 - 💓 **Thinking-of-you button** — instant buzz + petal burst for your partner
 - 🏮 **Shared lamp** — light it up and your partner sees it glowing
-- 🕒 **Dual timezone clocks** + live status (free / working / sleeping / driving / out)
-- 🎶 Song-of-the-day exchange + conversation deck
+- 🟢 **Live status** (free / working / sleeping / driving / out) — no more "are you busy?"
+- 🇮🇳 **IST-locked** — one timezone for everyone, zero clock math
 
 **Shared experience**
 - ✍️ **Doodle tab** — finger-drawn scribbles sent to a shared scrapbook feed

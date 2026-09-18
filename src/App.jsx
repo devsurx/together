@@ -4,13 +4,10 @@ import Onboarding from "./components/Onboarding.jsx";
 import Splash from "./components/Splash.jsx";
 import {
   BOOT_QUOTES,
-  CONVERSATION_LIBRARY,
   HOME_TZ,
   MOODS,
   STATUSES,
   bootQuote,
-  fmtTime,
-  istGreeting,
   promptForDate,
   todayKey,
 } from "./lib/content.js";
@@ -90,7 +87,7 @@ function AmbientBg() {
 const HOW_STEPS = [
   ["🌸", "One prompt a day", "Both answer → reveals together."],
   ["😊", "Mood + streak", "Both check in → streak grows."],
-  ["💓", "Stay close", "Nudges, lamp, songs & doodles."],
+  ["💓", "Stay close", "Nudges, lamp & doodles."],
 ];
 
 function DefaultGlance() {
@@ -165,14 +162,12 @@ export default function App() {
   const [toast, setToast] = useState("");
   const [answerDraft, setAnswerDraft] = useState("");
   const [installEvt, setInstallEvt] = useState(null);
-  const [convoIdx, setConvoIdx] = useState(0);
   const [pairTab, setPairTab] = useState("create");
   const [formName, setFormName] = useState("");
   const [formTz] = useState(HOME_TZ);
   const [joinCode, setJoinCode] = useState("");
   const [journalDraft, setJournalDraft] = useState("");
   const [bucketDraft, setBucketDraft] = useState("");
-  const [songDraft, setSongDraft] = useState("");
   const [showHelp, setShowHelp] = useState(false);
   const [pairBusy, setPairBusy] = useState(false);
   const [fbOnline, setFbOnline] = useState(false);
@@ -760,19 +755,6 @@ export default function App() {
               </section>
             )}
 
-            {/* activity */}
-            <section className="rounded-3xl border border-line bg-card p-5">
-              <SectionTitle kicker="us lately" title="Tiny history" />
-              {state.activity.length === 0 && <p className="text-xs text-zinc-500">Nothing yet — today is day one 🌱</p>}
-              <ul className="space-y-1.5">
-                {state.activity.slice(0, 6).map((a) => (
-                  <li key={a.id} className="flex justify-between gap-2 text-xs text-zinc-400">
-                    <span>{a.text}</span>
-                    <span className="shrink-0 text-zinc-600">{timeAgo(a.at)}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
           </div>
         )}
 
@@ -809,15 +791,16 @@ export default function App() {
               </button>
             </section>
 
-            {/* timezones + status */}
+            {/* status */}
             <section className="rounded-3xl border border-line bg-card p-5">
-              <SectionTitle kicker="together o'clock 🇮🇳" title={`${istGreeting()}, ${activeName}`} />
-              <div className="overflow-hidden rounded-2xl border border-line bg-gradient-to-b from-rose-950/60 to-coal p-5 text-center">
-                <div className="font-display text-5xl tabular-nums text-rose-50">{fmtTime(HOME_TZ)}</div>
-                <div className="mt-2 text-[11px] uppercase tracking-[0.25em] text-zinc-400">
-                  {new Date(now).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })} · IST
+              <SectionTitle kicker="presence" title="Are they free?" />
+              <div className="rounded-2xl border border-line bg-coal p-4 text-center">
+                <div className="text-sm text-zinc-200">
+                  {me.name} is <b className="text-rose-200">{me.status}</b>
+                  {" · "}
+                  {partner?.name || "partner"} is <b className="text-rose-200">{partner?.status || "…"}</b>
                 </div>
-                <div className="mt-1 text-[11px] text-zinc-500">same time for both of you — no math, ever 💛</div>
+                <div className="mt-1 text-[11px] text-zinc-500">no need to ask “are you busy?” 💛</div>
               </div>
               <div className="mt-3 flex items-center gap-2 text-xs">
                 <span className="text-zinc-400">{activeName} is…</span>
@@ -848,51 +831,6 @@ export default function App() {
               </p>
             </section>
 
-            {/* song of the day */}
-            <section className="rounded-3xl border border-line bg-card p-5">
-              <SectionTitle kicker="music" title="Song of the day 🎶" />
-              {state.song.title ? (
-                <p className="rounded-xl bg-black/40 p-3 text-sm text-zinc-200">
-                  🎧 <b>{state.song.title}</b> <span className="text-zinc-500">— shared by {state.song.by} · {timeAgo(state.song.at)}</span>
-                </p>
-              ) : (
-                <p className="text-xs text-zinc-500">No song yet today. Trade one track each.</p>
-              )}
-              <div className="mt-2 flex gap-2">
-                <input
-                  value={songDraft}
-                  onChange={(e) => setSongDraft(e.target.value)}
-                  placeholder="Artist — Title"
-                  className="flex-1 rounded-xl border border-line bg-coal px-3 py-2 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
-                />
-                <button
-                  onClick={() => {
-                    if (!songDraft.trim()) return;
-                    patch((s) => {
-                      s.song = { title: songDraft.trim(), by: activeName, at: Date.now() };
-                      s.points[activeUid] = (s.points[activeUid] || 0) + 2;
-                      return s;
-                    });
-                    if (fbMode) void fbWritePair(pair.pairId, { song: { title: songDraft.trim(), by: activeName, at: Date.now() } }).catch(() => {});
-                    setSongDraft("");
-                    burst();
-                  }}
-                  className="rounded-xl bg-rose-600 px-4 text-sm font-bold text-white active:scale-95"
-                >
-                  share
-                </button>
-              </div>
-            </section>
-
-            {/* conversation library */}
-            <section className="rounded-3xl border border-line bg-card p-5">
-              <SectionTitle
-                kicker="go deeper"
-                title="Conversation deck"
-                right={<button onClick={() => setConvoIdx((i) => (i + 1) % CONVERSATION_LIBRARY.length)} className="rounded-full border border-line px-3 py-1 text-[11px] text-zinc-300">shuffle ⟳</button>}
-              />
-              <p className="font-display text-base italic leading-relaxed text-rose-100">“{CONVERSATION_LIBRARY[convoIdx]}”</p>
-            </section>
           </div>
         )}
 
@@ -946,6 +884,9 @@ export default function App() {
                 </div>
               )}
               {daysToVisit !== null && daysToVisit < 0 && <p className="text-sm">💗 You were together recently — add the next one!</p>}
+              <p className="mt-3 text-[11px] text-zinc-500">
+                🌸 together you've earned {(state.points[me.uid] || 0) + (partner ? state.points[partner.uid] || 0 : 0)} pts for this trip
+              </p>
               <div className="mt-3 flex gap-2">
                 <input
                   type="date"
@@ -966,21 +907,6 @@ export default function App() {
                 placeholder="plan note… e.g. Maya flies Friday ✈️"
                 className="mt-2 w-full rounded-xl border border-line bg-coal px-3 py-2 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
               />
-            </section>
-
-            {/* points */}
-            <section className="rounded-3xl border border-line bg-card p-5">
-              <SectionTitle kicker="tiny rewards" title="Points toward us" />
-              <div className="grid grid-cols-2 gap-2 text-center">
-                {[me, partner].filter(Boolean).map((p) => (
-                  <div key={p.uid} className="rounded-2xl border border-line bg-coal p-3">
-                    <div className="text-[11px] uppercase tracking-widest text-zinc-500">{p.name}</div>
-                    <div className="font-display text-3xl text-amber-200">{state.points[p.uid] || 0}</div>
-                    <div className="text-[10px] text-zinc-500">pts</div>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-2 text-[11px] text-zinc-500">check-in together +10 · answer +3 · nudge +2 · doodle/journal +5 → spend on planning the next visit 🌸</p>
             </section>
 
             {/* journal */}

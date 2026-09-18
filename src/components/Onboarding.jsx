@@ -14,7 +14,7 @@ const STEPS = [
   {
     art: "💓",
     title: "Feel close, instantly",
-    text: "Buzz them with Thinking-of-you, light your shared lamp, trade a song — tiny touches for the hours between calls.",
+    text: "Buzz them with Thinking-of-you, light your shared lamp, send a doodle — tiny touches for the hours between calls.",
   },
   {
     art: "✍️",
