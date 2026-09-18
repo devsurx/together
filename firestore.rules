@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// Together — Firestore security rules.
+//
+// invites/{code}   single-use join ticket, readable by any signed-in device
+// users/{uid}      profile + FCM token; self-write, signed-in read
+// pairs/{pairId}   members-only; joining allowed exactly once via invite
+// pairs/{pairId}/days/{date}  shared answers+moods, members-only
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function authed() {
+      return request.auth != null;
+    }
+
+    function pairMember(pairId) {
+      let p = get(/databases/$(db)/documents/pairs/$(pairId)).data;
+      return request.auth.uid == p.user1 || request.auth.uid == p.user2;
+    }
+
+    match /invites/{code} {
+      allow read, create: if authed();
+      allow delete: if authed(); // single-use: joiner deletes after claiming
+    }
+
+    match /users/{uid} {
+      allow read: if authed();
+      allow write: if authed() && request.auth.uid == uid;
+    }
+
+    match /pairs/{pairId} {
+      allow create: if authed();
+      allow read: if authed() &&
+        (resource.data.user1 == request.auth.uid || resource.data.user2 == request.auth.uid);
+      allow update: if authed() && (
+        // members can update shared fields
+        resource.data.user1 == request.auth.uid || resource.data.user2 == request.auth.uid ||
+        // joining: claim the empty user2 slot, nothing else
+        (resource.data.user2 == null &&
+         request.resource.data.user2 == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['user2']))
+      );
+      allow delete: if false;
+
+      match /days/{date} {
+        allow read, write: if authed() && pairMember(pairId);
+      }
+    }
+  }
+}

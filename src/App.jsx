@@ -13,7 +13,8 @@ import {
   promptForDate,
   todayKey,
 } from "./lib/content.js";
-import { isFirebaseConfigured, requestReminderPermission, scheduleLocalReminder } from "./lib/firebase.js";
+import { isFirebaseConfigured, getFcmToken, onForegroundMessage, requestReminderPermission, scheduleLocalReminder } from "./lib/firebase.js";
+import { fbCreatePair, fbJoinPair, fbWriteDay, fbWriteMe, fbWritePair, loadFbLink, startSync } from "./lib/sync.js";
 import { applyStreak, createPair, freshState, loadState, makeInviteCode, saveState } from "./lib/store.js";
 
 function timeAgo(ts) {
@@ -172,6 +173,8 @@ export default function App() {
   const [bucketDraft, setBucketDraft] = useState("");
   const [songDraft, setSongDraft] = useState("");
   const [showHelp, setShowHelp] = useState(false);
+  const [fbOnline, setFbOnline] = useState(false);
+  const fbMode = isFirebaseConfigured;
 
   const burst = () => setBurstKey((k) => k + 1);
   const say = (t) => {
@@ -215,6 +218,58 @@ export default function App() {
     return () => reminderRef.current?.();
   }, [state.me?.reminderTime]);
 
+  // Firebase realtime sync: pair doc + today's answers + partner profile.
+  // Local state stays the UI cache; remote wins for shared fields.
+  useEffect(() => {
+    if (!fbMode || !state.me || !state.pair?.pairId) return;
+    const stop = startSync({
+      pairId: state.pair.pairId,
+      meUid: state.me.uid,
+      meProfile: {
+        name: state.me.name,
+        timezone: state.me.timezone,
+        status: state.me.status || "free",
+        reminderTime: state.me.reminderTime || "09:00",
+      },
+      setState,
+      notify: { toast: say, burst },
+      setOnline: setFbOnline,
+    });
+    return stop;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fbMode, state.pair?.pairId]);
+
+  // Foreground pushes + FCM token refresh while paired.
+  useEffect(() => {
+    if (!fbMode || !state.me || !state.pair?.pairId) return;
+    let stopped = false;
+    let offFg = null;
+    onForegroundMessage((payload) => {
+      if (stopped) return;
+      const d = payload?.data || payload?.notification || {};
+      say(`💗 ${d.body || d.title || "Something from your person"}`);
+      burst();
+    })
+      .then((off) => {
+        offFg = off;
+      })
+      .catch(() => {});
+    if ("Notification" in window && Notification.permission === "granted") {
+      getFcmToken()
+        .then((t) => fbWriteMe(state.me.uid, { fcmToken: t }).catch(() => {}))
+        .catch(() => {});
+    }
+    return () => {
+      stopped = true;
+      try {
+        offFg?.();
+      } catch {
+        /* noop */
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fbMode, state.pair?.pairId]);
+
   const patch = (fn) => setState((s) => fn(structuredClone(s)));
 
   const showOnboarding = booted && (!state.seenTutorial || showHelp);
@@ -227,6 +282,34 @@ export default function App() {
     if (msg) {
       burst();
       say(msg);
+    }
+  };
+
+  // Firebase pairing (replaces local invite codes when configured).
+  const fbPairingSubmit = async () => {
+    if (!formName.trim() || (pairTab === "join" && joinCode.trim().length < 4)) return;
+    try {
+      const res =
+        pairTab === "create"
+          ? await fbCreatePair(formName.trim(), formTz)
+          : await fbJoinPair(joinCode.trim().toUpperCase(), formName.trim(), formTz);
+      const uid = loadFbLink()?.uid;
+      patch((s) => {
+        s.me = { uid, name: formName.trim(), timezone: formTz, status: "free", reminderTime: "09:00" };
+        s.pair = { pairId: res.pairId, inviteCode: res.inviteCode, streakCount: 0, lastCheckIn: null, forgiveUsed: false };
+        s.partner = null;
+        s.points[uid] = 0;
+        s.activity.unshift({
+          id: Date.now(),
+          text: pairTab === "create" ? `${formName.trim()} created invite ${res.inviteCode}` : `${formName.trim()} joined pair 💞`,
+          at: Date.now(),
+        });
+        return s;
+      });
+      burst();
+      say(pairTab === "create" ? "Invite created — share your code 💌" : "Paired! 💞");
+    } catch (e) {
+      say(e?.message || "Pairing failed — check connection");
     }
   };
 
@@ -295,7 +378,11 @@ export default function App() {
 
           <button
             disabled={!formName.trim() || (pairTab === "join" && joinCode.trim().length < 4)}
-            onClick={() => {
+            onClick={async () => {
+              if (fbMode) {
+                await fbPairingSubmit();
+                return;
+              }
               if (pairTab === "create") {
                 const { me, pair } = createPair(formName.trim(), formTz);
                 patch((s) => {
@@ -334,6 +421,7 @@ export default function App() {
             {pairTab === "create" ? "Create our space 💗" : "Join with code 🔗"}
           </button>
 
+          {!fbMode && (
           <button
             onClick={() => {
               const { me, pair } = createPair(formName.trim() || "You", formTz);
@@ -353,6 +441,7 @@ export default function App() {
           >
             ✨ just try the demo (pairs you with Sam)
           </button>
+          )}
           <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
             Real backend: invite codes map to <span className="text-zinc-300">pairs/{`{pairId}`}</span> in Firestore with
             realtime sync + FCM. This build runs fully offline in demo mode
@@ -366,8 +455,9 @@ export default function App() {
   }
 
   const { me, partner, pair } = state;
-  const activeUid = state.viewingAs === "partner" && partner ? partner.uid : me.uid;
-  const activeName = state.viewingAs === "partner" && partner ? partner.name : me.name;
+  // In Firebase mode each phone answers as itself (no demo switch).
+  const activeUid = !fbMode && state.viewingAs === "partner" && partner ? partner.uid : me.uid;
+  const activeName = !fbMode && state.viewingAs === "partner" && partner ? partner.name : me.name;
   const dateKey = todayKey(me.timezone);
   const prompt = promptForDate(dateKey);
   const dayResponses = state.responses[dateKey] || {};
@@ -446,10 +536,12 @@ export default function App() {
       };
       return ensureStreak(s);
     });
+    if (fbMode) void fbWriteDay(pair.pairId, dateKey, activeUid, { mood: moodId }).catch(() => {});
   };
 
   const submitAnswer = () => {
     if (!answerDraft.trim()) return;
+    if (fbMode) void fbWriteDay(pair.pairId, dateKey, activeUid, { answer: answerDraft.trim() }).catch(() => {});
     patch((s) => {
       s.responses[dateKey] = s.responses[dateKey] || {};
       const prev = s.responses[dateKey][activeUid] || {};
@@ -469,6 +561,7 @@ export default function App() {
       s.points[activeUid] = (s.points[activeUid] || 0) + 2;
       return s;
     });
+    if (fbMode) void fbWritePair(pair.pairId, { lastNudge: { from: activeUid, fromName: activeName, at: Date.now() } }).catch(() => {});
     burst();
     say("Thinking-of-you sent 💓");
     try {
@@ -488,24 +581,39 @@ export default function App() {
           <Lily size={30} />
           <div className="leading-tight">
             <div className="font-display text-lg text-rose-50">together</div>
-            <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">{dateKey} · day {pair.streakCount} 🔥</div>
+            <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">
+              {dateKey} · day {pair.streakCount} 🔥 ·{" "}
+              {fbMode ? (
+                <span className={fbOnline ? "text-emerald-300" : "text-zinc-500"}>
+                  {fbOnline ? "● live sync" : "○ offline"}
+                </span>
+              ) : (
+                <span>demo mode</span>
+              )}
+            </div>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <div className="flex rounded-full border border-line bg-card p-0.5 text-[11px]">
-              <button
-                onClick={() => patch((s) => { s.viewingAs = "me"; return s; })}
-                className={`rounded-full px-2.5 py-1 font-semibold ${state.viewingAs !== "partner" ? "bg-rose-600 text-white" : "text-zinc-400"}`}
-              >
-                {me.name}
-              </button>
-              <button
-                disabled={!partner}
-                onClick={() => patch((s) => { s.viewingAs = "partner"; return s; })}
-                className={`rounded-full px-2.5 py-1 font-semibold ${state.viewingAs === "partner" ? "bg-rose-600 text-white" : "text-zinc-400 disabled:opacity-40"}`}
-              >
-                {partner?.name || "…"}
-              </button>
-            </div>
+            {fbMode ? (
+              <span className="rounded-full border border-line bg-card px-3 py-1 text-[11px] font-semibold text-zinc-300">
+                you are {me.name}
+              </span>
+            ) : (
+              <div className="flex rounded-full border border-line bg-card p-0.5 text-[11px]">
+                <button
+                  onClick={() => patch((s) => { s.viewingAs = "me"; return s; })}
+                  className={`rounded-full px-2.5 py-1 font-semibold ${state.viewingAs !== "partner" ? "bg-rose-600 text-white" : "text-zinc-400"}`}
+                >
+                  {me.name}
+                </button>
+                <button
+                  disabled={!partner}
+                  onClick={() => patch((s) => { s.viewingAs = "partner"; return s; })}
+                  className={`rounded-full px-2.5 py-1 font-semibold ${state.viewingAs === "partner" ? "bg-rose-600 text-white" : "text-zinc-400 disabled:opacity-40"}`}
+                >
+                  {partner?.name || "…"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
         {/* streak banner */}
@@ -614,7 +722,7 @@ export default function App() {
             </section>
 
             {/* partner linking */}
-            {!partner && (
+            {!partner && !fbMode && (
               <section className="rounded-3xl border border-dashed border-rose-500/40 bg-card p-5">
                 <SectionTitle kicker="pairing" title="Link your partner" />
                 <PartnerForm
@@ -631,6 +739,13 @@ export default function App() {
                   }}
                 />
                 <p className="mt-2 text-center text-xs text-zinc-500">Your invite code: <b className="tracking-[0.3em] text-rose-200">{pair.inviteCode}</b></p>
+              </section>
+            )}
+            {!partner && fbMode && (
+              <section className="rounded-3xl border border-dashed border-rose-500/40 bg-card p-5 text-center">
+                <div className="text-xs text-zinc-400">Share your invite code — your partner joins on their phone</div>
+                <div className="font-display mt-1 text-3xl tracking-[0.3em] text-rose-200">{pair.inviteCode}</div>
+                <div className="mt-1 text-[11px] text-zinc-500">single-use · expires when claimed 💞</div>
               </section>
             )}
 
@@ -669,10 +784,12 @@ export default function App() {
               {/* virtual lamp */}
               <button
                 onClick={() => {
+                  const next = state.lamp.litBy === activeUid ? { litBy: null, at: Date.now() } : { litBy: activeUid, at: Date.now() };
                   patch((s) => {
-                    s.lamp = s.lamp.litBy === activeUid ? { litBy: null, at: Date.now() } : { litBy: activeUid, at: Date.now() };
+                    s.lamp = next;
                     return s;
                   });
+                  if (fbMode) void fbWritePair(pair.pairId, { lamp: next }).catch(() => {});
                   burst();
                 }}
                 className={`mt-4 w-full rounded-2xl border py-3 text-sm font-semibold ${state.lamp.litBy ? "border-amber-300/50 bg-amber-300/10 text-amber-200" : "border-line bg-coal text-zinc-300"}`}
@@ -701,11 +818,14 @@ export default function App() {
                     return (
                       <button
                         key={st}
-                        onClick={() => patch((s) => {
-                          if (s.viewingAs === "partner" && s.partner) s.partner.status = st;
-                          else s.me.status = st;
-                          return s;
-                        })}
+                        onClick={() => {
+                          patch((s) => {
+                            if (s.viewingAs === "partner" && s.partner) s.partner.status = st;
+                            else s.me.status = st;
+                            return s;
+                          });
+                          if (fbMode) void fbWriteMe(activeUid, { status: st }).catch(() => {});
+                        }}
                         className={`rounded-full px-2.5 py-1 font-semibold ${cur === st ? "bg-rose-600 text-white" : "border border-line text-zinc-400"}`}
                       >
                         {st}
@@ -744,6 +864,7 @@ export default function App() {
                       s.points[activeUid] = (s.points[activeUid] || 0) + 2;
                       return s;
                     });
+                    if (fbMode) void fbWritePair(pair.pairId, { song: { title: songDraft.trim(), by: activeName, at: Date.now() } }).catch(() => {});
                     setSongDraft("");
                     burst();
                   }}
@@ -820,13 +941,19 @@ export default function App() {
                 <input
                   type="date"
                   value={state.visit.date}
-                  onChange={(e) => patch((s) => { s.visit.date = e.target.value; return s; })}
+                  onChange={(e) => {
+                    patch((s) => { s.visit.date = e.target.value; return s; });
+                    if (fbMode) void fbWritePair(pair.pairId, { visit: { ...state.visit, date: e.target.value } }).catch(() => {});
+                  }}
                   className="flex-1 rounded-xl border border-line bg-coal px-3 py-2 text-sm text-zinc-200 outline-none focus:border-rose-500"
                 />
               </div>
               <input
                 value={state.visit.note}
-                onChange={(e) => patch((s) => { s.visit.note = e.target.value; return s; })}
+                onChange={(e) => {
+                  patch((s) => { s.visit.note = e.target.value; return s; });
+                  if (fbMode) void fbWritePair(pair.pairId, { visit: { ...state.visit, note: e.target.value } }).catch(() => {});
+                }}
                 placeholder="plan note… e.g. Maya flies Friday ✈️"
                 className="mt-2 w-full rounded-xl border border-line bg-coal px-3 py-2 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
               />
@@ -936,13 +1063,29 @@ export default function App() {
                 <input
                   type="time"
                   value={me.reminderTime || "09:00"}
-                  onChange={(e) => patch((s) => { s.me.reminderTime = e.target.value; return s; })}
+                  onChange={(e) => {
+                    patch((s) => { s.me.reminderTime = e.target.value; return s; });
+                    if (fbMode) void fbWriteMe(me.uid, { reminderTime: e.target.value }).catch(() => {});
+                  }}
                   className="rounded-lg border border-line bg-coal px-2 py-1 text-sm outline-none"
                 />
                 <button
                   onClick={async () => {
                     const r = await requestReminderPermission();
-                    say(r === "granted" ? "Reminders on 🔔" : `Notifications: ${r}`);
+                    if (r !== "granted") {
+                      say(`Notifications: ${r}`);
+                      return;
+                    }
+                    say("Reminders on 🔔");
+                    if (fbMode) {
+                      try {
+                        const token = await getFcmToken();
+                        await fbWriteMe(me.uid, { fcmToken: token, reminderTime: me.reminderTime || "09:00" });
+                        say("Push registered on this device 📲");
+                      } catch {
+                        say("Push needs HTTPS + VAPID key in .env");
+                      }
+                    }
                   }}
                   className="ml-auto rounded-xl border border-line px-3 py-1.5 text-xs text-zinc-300"
                 >

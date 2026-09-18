@@ -62,10 +62,47 @@ The production build is installable: on your phone open the hosted URL → **Sha
 
 ## 🔌 Going live with Firebase
 
-1. Copy `.env.example` to `.env` and fill in your Firebase web config:
-   `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_VAPID_KEY`
-2. Replace the local `loadState`/`saveState` in `src/lib/store.js` with Firestore reads/writes (`users/`, `pairs/`, `responses/`) + `onSnapshot` realtime sync — seams are marked in `src/lib/firebase.js`.
-3. Wire FCM with the VAPID key for the daily prompt reminder (a local scheduler stand-in ships in the meantime).
+The app ships in **local demo mode**. To get true two-phone realtime sync + daily push, wire up Firebase (anonymous auth, Firestore, FCM, one scheduled function).
+
+**What syncs vs what stays on-device:**
+
+| Synced (Firestore) | Local-only (this device) |
+|---|---|
+| profiles, pair core, moods + answers, nudges, lamp, song, visit countdown | doodles, journal, bucket list, points, activity feed |
+
+### 1. Console setup (~10 min)
+
+1. [console.firebase.google.com](https://console.firebase.google.com) → **Add project** → name it e.g. `together-couples` → turn **Analytics OFF** → Create.
+2. **Build → Authentication → Get started → Sign-in method → Anonymous → Enable → Save.**
+3. **Build → Firestore Database → Create database → Start in production mode** → pick your region → Enable. Then open the **Rules** tab, paste `firestore.rules` from this repo → **Publish**. (Or deploy it via CLI in step 3 below.)
+4. **Project Overview → Add app ( `</>` )** → nickname `together-web` → Register (skip Hosting for now) → copy `apiKey`, `authDomain`, `projectId`, `appId`.
+5. **Project settings → Cloud Messaging → Web Push certificates → Generate key pair** → copy the **VAPID key**.
+6. **Upgrade the project to Blaze** (pay-as-you-go; the scheduled function below runs inside the free allowance at this scale).
+
+### 2. Local config (never committed)
+
+```bash
+cp .env.example .env   # then fill in the 5 values from step 1
+```
+
+Also paste the same 4 web-config values into `public/firebase-messaging-sw.js` where marked (FCM requires that file at the site root; web keys are public by design).
+
+### 3. Deploy (your terminal)
+
+```bash
+npm i -g firebase-tools
+firebase login
+firebase use --add          # select your project
+npm run build
+firebase deploy --only firestore:rules,hosting
+firebase deploy --only functions
+```
+
+Your public URL (Hosting) is what both phones open — installable via **Share → Add to Home Screen**, and push-capable over HTTPS. Each phone taps **enable 🔔** in **Us → Settings** once to register for the daily prompt push (sent at each person's `reminderTime` in their own timezone).
+
+### 4. Two-phone flow
+
+Phone A: **Create invite** → share the 6-letter code. Phone B: **Join partner** → enter code. Both answer + check in → reveal + streak sync live (`● live sync` in the header; `○ offline` means it fell back to local).
 
 ## 📁 Project structure
 
