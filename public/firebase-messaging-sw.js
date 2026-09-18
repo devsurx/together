@@ -20,9 +20,11 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// The Cloud Function sends data-only payloads; we render them here so the
-// notification always shows (and never double-shows).
+// Pushes carry a visible `notification` payload (required for iOS background
+// delivery), which the system displays itself. Only data-only payloads are
+// rendered manually here — otherwise you'd get every ping twice.
 messaging.onBackgroundMessage((payload) => {
+  if (payload.notification) return;
   const d = payload.data || {};
   self.registration.showNotification(d.title || "Together 💗", {
     body: d.body || "Today's prompt is waiting for both of you.",

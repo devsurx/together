@@ -105,10 +105,21 @@ for (const row of await q.json()) {
   if (!parts || parts.hm !== rt || last === parts.date) continue;
 
   const body = `Today's prompt: ${promptForDate(parts.date)}`;
-  const send = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+  const send = await fetch(FCM_URL, {
     method: "POST",
     headers: H,
-    body: JSON.stringify({ message: { token: fcm, data: { title: "Together 💗", body, link: "/" } } }),
+    body: JSON.stringify({
+      message: {
+        token: fcm,
+        notification: { title: "Together 💗", body },
+        webpush: {
+          headers: { Urgency: "normal" },
+          notification: { icon: "/icon.svg", badge: "/lily.svg" },
+          fcm_options: { link: "/" },
+        },
+        data: { title: "Together 💗", body, link: "/" },
+      },
+    }),
   });
 
   if (send.ok) {
@@ -196,17 +207,19 @@ for (const u of usersSeen) {
   const on = await fetch(`${DB}/documents/users/${other}`, { headers: H });
   if (on.ok) partnerName = str((await on.json()).fields || {}, "name") || partnerName;
 
+  const riskBody = `${partnerName} already checked in — 30 seconds to save the streak`;
   const send2 = await fetch(FCM_URL, {
     method: "POST",
     headers: H,
     body: JSON.stringify({
       message: {
         token: fcm,
-        data: {
-          title: "Together 🔥",
-          body: `${partnerName} already checked in — 30 seconds to save the streak`,
-          link: "/",
+        notification: { title: "Together 🔥", body: riskBody },
+        webpush: {
+          notification: { icon: "/icon.svg", badge: "/lily.svg" },
+          fcm_options: { link: "/" },
         },
+        data: { title: "Together 🔥", body: riskBody, link: "/" },
       },
     }),
   });

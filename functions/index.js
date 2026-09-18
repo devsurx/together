@@ -72,8 +72,13 @@ exports.dailyReminder = onSchedule({ schedule: "every 15 minutes", timeZone: "Ut
       messaging
         .send({
           token: u.fcmToken,
+          notification: { title: "Together 💗", body },
+          webpush: {
+            headers: { Urgency: "normal" },
+            notification: { icon: "/icon.svg", badge: "/lily.svg" },
+            fcm_options: { link: "/" },
+          },
           data: { title: "Together 💗", body, link: "/" },
-          webpush: { headers: { Urgency: "normal" } },
         })
         .then(() => doc.ref.update({ lastReminded: parts.date }).catch(() => {}))
         .catch((e) => {
