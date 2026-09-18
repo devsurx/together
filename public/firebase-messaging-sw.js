@@ -12,10 +12,10 @@ importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js
 importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
 
 firebase.initializeApp({
-  apiKey: "PASTE_VITE_FIREBASE_API_KEY",
-  authDomain: "PASTE_VITE_FIREBASE_AUTH_DOMAIN",
-  projectId: "PASTE_VITE_FIREBASE_PROJECT_ID",
-  appId: "PASTE_VITE_FIREBASE_APP_ID",
+  apiKey: "AIzaSyDHbvYkVA1XDaFfJZgfPK6NmCvyCO0XMXU",
+  authDomain: "together-couples-3f56f.firebaseapp.com",
+  projectId: "together-couples-3f56f",
+  appId: "1:284290462881:web:fa8fe20b430d0825b1ece0",
 });
 
 const messaging = firebase.messaging();
