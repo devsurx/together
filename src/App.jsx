@@ -5,11 +5,12 @@ import Splash from "./components/Splash.jsx";
 import {
   BOOT_QUOTES,
   CONVERSATION_LIBRARY,
+  HOME_TZ,
   MOODS,
   STATUSES,
-  TIMEZONES,
   bootQuote,
   fmtTime,
+  istGreeting,
   promptForDate,
   todayKey,
 } from "./lib/content.js";
@@ -167,7 +168,7 @@ export default function App() {
   const [convoIdx, setConvoIdx] = useState(0);
   const [pairTab, setPairTab] = useState("create");
   const [formName, setFormName] = useState("");
-  const [formTz, setFormTz] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
+  const [formTz] = useState(HOME_TZ);
   const [joinCode, setJoinCode] = useState("");
   const [journalDraft, setJournalDraft] = useState("");
   const [bucketDraft, setBucketDraft] = useState("");
@@ -330,7 +331,7 @@ export default function App() {
         <div className="flex items-center gap-3">
           <Lily size={44} />
           <div>
-            <h1 className="font-display text-3xl text-rose-50">together</h1>
+            <h1 className="font-display title-gradient text-3xl">together</h1>
             <p className="text-xs text-zinc-400">one prompt · one mood · one streak</p>
           </div>
         </div>
@@ -349,6 +350,13 @@ export default function App() {
         </div>
 
         <div className="anim-bloom-in mt-4 rounded-3xl border border-line bg-card p-5">
+          <div className="mb-4 flex items-center gap-2 text-[11px]">
+            <span className="anim-pop flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-pink-500 font-bold text-white">1</span>
+            <span className="text-zinc-300">tell us your name</span>
+            <span className="text-zinc-600">→</span>
+            <span className="flex h-6 w-6 items-center justify-center rounded-full border border-line font-bold text-zinc-400">2</span>
+            <span className="text-zinc-300">share the code</span>
+          </div>
           <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400">your name</label>
           <input
             value={formName}
@@ -356,16 +364,10 @@ export default function App() {
             placeholder="e.g. Maya"
             className="mt-2 w-full rounded-xl border border-line bg-coal px-3 py-2.5 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
           />
-          <label className="mt-4 block text-xs font-semibold uppercase tracking-widest text-zinc-400">your timezone</label>
-          <select
-            value={formTz}
-            onChange={(e) => setFormTz(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-line bg-coal px-3 py-2.5 text-sm outline-none focus:border-rose-500"
-          >
-            {TIMEZONES.map((z) => (
-              <option key={z} value={z}>{z}</option>
-            ))}
-          </select>
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-line bg-coal px-3 py-2.5 text-sm">
+            <span className="text-zinc-400">your timezone</span>
+            <span className="font-semibold text-rose-200">🇮🇳 IST · Kolkata</span>
+          </div>
 
           {pairTab === "join" && (
             <>
@@ -420,7 +422,7 @@ export default function App() {
                 say("Joined! Add your partner's name next 💗");
               }
             }}
-            className="mt-5 w-full rounded-2xl bg-rose-600 py-3 text-sm font-bold text-white disabled:opacity-40 active:scale-[0.98]"
+            className="btn-love mt-5 w-full rounded-2xl py-3 text-sm disabled:opacity-40"
           >
             {pairBusy ? "working… ⏳" : pairTab === "create" ? "Create our space 💗" : "Join with code 🔗"}
           </button>
@@ -589,7 +591,7 @@ export default function App() {
         <div className="flex items-center gap-2 px-4 pt-4">
           <Lily size={30} />
           <div className="leading-tight">
-            <div className="font-display text-lg text-rose-50">together</div>
+            <div className="font-display title-gradient text-lg">together</div>
             <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">
               {dateKey} · day {pair.streakCount} 🔥 ·{" "}
               {fbMode ? (
@@ -628,7 +630,7 @@ export default function App() {
         {/* streak banner */}
         <div className="px-4 pb-3 pt-2">
           <div className="flex items-center gap-3 rounded-2xl border border-rose-500/25 bg-gradient-to-r from-rose-950/60 to-card px-4 py-3">
-            <span className="text-3xl">{pair.streakCount > 0 ? "🔥" : "🌱"}</span>
+            <span className={`text-3xl ${pair.streakCount > 0 ? "anim-flicker" : "anim-float-soft"}`}>{pair.streakCount > 0 ? "🔥" : "🌱"}</span>
             <div className="flex-1">
               <div className="text-sm font-bold text-rose-50">
                 {pair.streakCount > 0 ? `${pair.streakCount}-day streak` : "Start your streak today"}
@@ -688,7 +690,7 @@ export default function App() {
                       <button
                         onClick={submitAnswer}
                         disabled={!answerDraft.trim()}
-                        className="mt-2 w-full rounded-2xl bg-rose-600 py-2.5 text-sm font-bold text-white disabled:opacity-40 active:scale-[0.98]"
+                        className="btn-love mt-2 w-full rounded-2xl py-2.5 text-sm disabled:opacity-40"
                       >
                         Seal my answer 🔒
                       </button>
@@ -735,9 +737,9 @@ export default function App() {
               <section className="rounded-3xl border border-dashed border-rose-500/40 bg-card p-5">
                 <SectionTitle kicker="pairing" title="Link your partner" />
                 <PartnerForm
-                  onAdd={(name, tz) => {
+                  onAdd={(name) => {
                     patch((s) => {
-                      const p = { uid: `u_${Math.random().toString(36).slice(2, 8)}`, name, timezone: tz, status: "free" };
+                      const p = { uid: `u_${Math.random().toString(36).slice(2, 8)}`, name, timezone: HOME_TZ, status: "free" };
                       s.partner = p;
                       s.points[p.uid] = 0;
                       s.activity.unshift({ id: Date.now(), text: `${p.name} linked via code ${s.pair.inviteCode}`, at: Date.now() });
@@ -809,15 +811,13 @@ export default function App() {
 
             {/* timezones + status */}
             <section className="rounded-3xl border border-line bg-card p-5">
-              <SectionTitle kicker="two clocks" title="Local time" right={<span className="text-[11px] tabular-nums text-zinc-500">{new Date(now).toLocaleTimeString()}</span>} />
-              <div className="grid grid-cols-2 gap-2">
-                {[{ n: me.name, tz: me.timezone, who: "me" }, { n: partner?.name || "partner", tz: partner?.timezone || me.timezone, who: "partner" }].map((c) => (
-                  <div key={c.who} className="rounded-2xl border border-line bg-coal p-3 text-center">
-                    <div className="text-[11px] uppercase tracking-widest text-zinc-500">{c.n}</div>
-                    <div className="font-display text-2xl text-rose-50">{fmtTime(c.tz)}</div>
-                    <div className="truncate text-[10px] text-zinc-500">{c.tz}</div>
-                  </div>
-                ))}
+              <SectionTitle kicker="together o'clock 🇮🇳" title={`${istGreeting()}, ${activeName}`} />
+              <div className="overflow-hidden rounded-2xl border border-line bg-gradient-to-b from-rose-950/60 to-coal p-5 text-center">
+                <div className="font-display text-5xl tabular-nums text-rose-50">{fmtTime(HOME_TZ)}</div>
+                <div className="mt-2 text-[11px] uppercase tracking-[0.25em] text-zinc-400">
+                  {new Date(now).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })} · IST
+                </div>
+                <div className="mt-1 text-[11px] text-zinc-500">same time for both of you — no math, ever 💛</div>
               </div>
               <div className="mt-3 flex items-center gap-2 text-xs">
                 <span className="text-zinc-400">{activeName} is…</span>
@@ -1183,7 +1183,6 @@ export default function App() {
 
 function PartnerForm({ onAdd }) {
   const [name, setName] = useState("");
-  const [tz, setTz] = useState("America/New_York");
   return (
     <div>
       <div className="flex gap-2">
@@ -1195,17 +1194,13 @@ function PartnerForm({ onAdd }) {
         />
         <button
           disabled={!name.trim()}
-          onClick={() => { onAdd(name.trim(), tz); setName(""); }}
-          className="rounded-xl bg-rose-600 px-4 text-sm font-bold text-white disabled:opacity-40 active:scale-95"
+          onClick={() => { onAdd(name.trim()); setName(""); }}
+          className="btn-love rounded-xl px-4 text-sm"
         >
           link 💞
         </button>
       </div>
-      <select value={tz} onChange={(e) => setTz(e.target.value)} className="mt-2 w-full rounded-xl border border-line bg-coal px-3 py-2 text-xs outline-none">
-        {TIMEZONES.map((z) => (
-          <option key={z} value={z}>{z}</option>
-        ))}
-      </select>
+      <p className="mt-2 text-[11px] text-zinc-500">They're on IST too 🇮🇳 — no timezone math needed.</p>
     </div>
   );
 }

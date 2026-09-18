@@ -101,7 +101,7 @@ export default function DoodleCanvas({ onSend }) {
             setCaption("");
             clear();
           }}
-          className="rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white active:scale-95"
+          className="btn-love rounded-xl px-5 py-2.5 text-sm"
         >
           send 🌸
         </button>

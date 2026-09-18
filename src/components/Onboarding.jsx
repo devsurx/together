@@ -68,7 +68,7 @@ export default function Onboarding({ onClose }) {
           )}
           <button
             onClick={() => (last ? onClose() : setI(i + 1))}
-            className="flex-1 rounded-2xl bg-rose-600 py-2.5 text-sm font-bold text-white active:scale-[0.98]"
+            className="btn-love flex-1 rounded-2xl py-2.5 text-sm"
           >
             {last ? "Start our ritual 💗" : "next →"}
           </button>

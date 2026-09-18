@@ -88,24 +88,25 @@ export const MOODS = [
 
 export const STATUSES = ["free", "working", "sleeping", "driving", "out"];
 
-export const TIMEZONES = [
-  "UTC",
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Los_Angeles",
-  "America/Sao_Paulo",
-  "Europe/London",
-  "Europe/Berlin",
-  "Europe/Bucharest",
-  "Africa/Lagos",
-  "Asia/Dubai",
-  "Asia/Kolkata",
-  "Asia/Singapore",
-  "Asia/Tokyo",
-  "Australia/Sydney",
-  "Pacific/Auckland",
-];
+export const HOME_TZ = "Asia/Kolkata";
+
+export function istGreeting(date = new Date()) {
+  let h;
+  try {
+    h = Number(
+      new Intl.DateTimeFormat("en-GB", { timeZone: HOME_TZ, hour: "2-digit", hour12: false }).format(date)
+    );
+  } catch {
+    h = date.getHours();
+  }
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  if (h < 21) return "Good evening";
+  return "Good night";
+}
+
+// India-only for now: single locked timezone (no selectors in UI).
+export const TIMEZONES = ["Asia/Kolkata"];
 
 export function todayKey(tz) {
   try {
