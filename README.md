@@ -62,7 +62,7 @@ The production build is installable: on your phone open the hosted URL → **Sha
 
 ## 🔌 Going live with Firebase
 
-The app ships in **local demo mode**. To get true two-phone realtime sync + daily push, wire up Firebase (anonymous auth, Firestore, FCM, one scheduled function).
+The app ships in **local demo mode**. To get true two-phone realtime sync + daily push, wire up Firebase (anonymous auth, Firestore, FCM) — **fully free, no billing/Blaze needed**: the daily reminder runs as a GitHub Actions cron instead of a Cloud Function.
 
 **What syncs vs what stays on-device:**
 
@@ -77,7 +77,7 @@ The app ships in **local demo mode**. To get true two-phone realtime sync + dail
 3. **Build → Firestore Database → Create database → Start in production mode** → pick your region → Enable. Then open the **Rules** tab, paste `firestore.rules` from this repo → **Publish**. (Or deploy it via CLI in step 3 below.)
 4. **Project Overview → Add app ( `</>` )** → nickname `together-web` → Register (skip Hosting for now) → copy `apiKey`, `authDomain`, `projectId`, `appId`.
 5. **Project settings → Cloud Messaging → Web Push certificates → Generate key pair** → copy the **VAPID key**.
-6. **Upgrade the project to Blaze** (pay-as-you-go; the scheduled function below runs inside the free allowance at this scale).
+6. **Skip Blaze entirely** — the daily push runs via GitHub Actions (step 4), so no billing account is ever needed. (`functions/` holds an equivalent Cloud Function if you ever want the Blaze path later.)
 
 ### 2. Local config (never committed)
 
@@ -91,14 +91,22 @@ Also paste the same 4 web-config values into `public/firebase-messaging-sw.js` w
 
 ```bash
 npm i -g firebase-tools
-firebase login
+firebase login --no-localhost
 firebase use --add          # select your project
 npm run build
 firebase deploy --only firestore:rules,hosting
-firebase deploy --only functions
 ```
 
 Your public URL (Hosting) is what both phones open — installable via **Share → Add to Home Screen**, and push-capable over HTTPS. Each phone taps **enable 🔔** in **Us → Settings** once to register for the daily prompt push (sent at each person's `reminderTime` in their own timezone).
+
+### 4. Free daily push (GitHub Actions, no Blaze)
+
+1. [console.cloud.google.com](https://console.cloud.google.com) → select your project → **IAM & Admin → Service Accounts → Create service account** → name `together-scheduler` → grant the **Firebase Admin** role → Done.
+2. Open the account → **Keys → Add key → Create new key → JSON** (downloads a file).
+3. GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**: name `FIREBASE_SERVICE_ACCOUNT`, value = the entire JSON file contents → Add secret.
+4. **Actions tab → daily-reminder → Run workflow** to test (it also runs every 15 min automatically).
+
+That's it — due devices get the prompt push, `lastReminded` prevents duplicates, stale tokens are cleared automatically.
 
 ### 4. Two-phone flow
 

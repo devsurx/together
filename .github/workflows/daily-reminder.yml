@@ -1,0 +1,36 @@
+name: daily-reminder
+
+# $0 push path: every 15 min, check who is due for their daily prompt
+# (reminderTime in their own timezone) and send it via FCM HTTP v1.
+# No Blaze/billing needed. Manual runs supported for testing.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-reminder
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: scripts/reminder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: scripts/reminder/package.json
+      - run: npm install --no-audit --no-fund
+      - run: node send-reminders.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
