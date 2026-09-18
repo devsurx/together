@@ -375,7 +375,7 @@ export default function App() {
           <input
             value={formName}
             onChange={(e) => setFormName(e.target.value)}
-            placeholder="e.g. Maya"
+            placeholder="e.g. Aishwarya"
             className="mt-2 w-full rounded-xl border border-line bg-coal px-3 py-2.5 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
           />
           <div className="mt-4 flex items-center justify-between rounded-xl border border-line bg-coal px-3 py-2.5 text-sm">
@@ -909,7 +909,7 @@ export default function App() {
                   patch((s) => { s.visit.note = e.target.value; return s; });
                   if (fbMode) void fbWritePair(pair.pairId, { visit: { ...state.visit, note: e.target.value } }).catch(() => {});
                 }}
-                placeholder="plan note… e.g. Maya flies Friday ✈️"
+                placeholder="plan note… e.g. Aishwarya flies Friday ✈️"
                 className="mt-2 w-full rounded-xl border border-line bg-coal px-3 py-2 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
               />
             </section>
