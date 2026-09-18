@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import LilyBloom from "./LilyBloom.jsx";
+import { loadState, saveState } from "../lib/store.js";
 
 const NOTE =
   "Hi Aishwarya ✨\n\nThis tiny corner of the internet is only yours.\nSame sky, same stars — same us. 💛\n\n— forever yours";
@@ -42,8 +43,21 @@ export default function SecretPage() {
   const [typed, setTyped] = useState("");
   const [reason, setReason] = useState(0);
   const [burstKey, setBurstKey] = useState(0);
+  const [step, setStep] = useState("main"); // main | theme
   const [hugs, addHug] = useHugs();
   const done = typed.length >= NOTE.length;
+
+  // Entering the app from here: save the chosen sky, then go in.
+  const chooseTheme = (theme) => {
+    try {
+      const s = loadState();
+      s.theme = theme;
+      saveState(s);
+    } catch {
+      /* ignore */
+    }
+    window.location.href = "/";
+  };
 
   useEffect(() => {
     document.title = "for Aishwarya 💛";
@@ -157,14 +171,42 @@ export default function SecretPage() {
               {hugs === 0 ? "no hugs yet — fix that 👆" : `${hugs} hug${hugs === 1 ? "" : "s"} collected 💛`}
             </p>
 
-            <button
-              onClick={() => {
-                window.location.href = "/";
-              }}
-              className="mt-8 text-xs text-amber-100/50 underline underline-offset-4"
-            >
-              ← back to our every day
-            </button>
+            {step === "main" ? (
+              <button
+                onClick={() => setStep("theme")}
+                className="mt-8 w-full rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 py-3 text-sm font-bold text-amber-950 shadow-[0_10px_40px_-10px_rgba(245,158,11,0.7)] active:scale-[0.98]"
+              >
+                Next →
+              </button>
+            ) : (
+              <div className="anim-bloom-in mt-8">
+                <p className="text-sm text-amber-100/80">One last thing — how should our sky look?</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => chooseTheme("lilies")}
+                    className="rounded-3xl border border-rose-200/30 bg-white/5 p-5 backdrop-blur active:scale-95"
+                  >
+                    <div className="text-4xl">🌸</div>
+                    <div className="mt-2 text-sm font-bold text-rose-50">Lilies</div>
+                    <div className="text-[11px] text-zinc-400">soft & romantic</div>
+                  </button>
+                  <button
+                    onClick={() => chooseTheme("stars")}
+                    className="rounded-3xl border border-amber-200/30 bg-white/5 p-5 backdrop-blur active:scale-95"
+                  >
+                    <div className="text-4xl">🌟</div>
+                    <div className="mt-2 text-sm font-bold text-amber-50">Starry night</div>
+                    <div className="text-[11px] text-zinc-400">golden & dreamy</div>
+                  </button>
+                </div>
+                <button
+                  onClick={() => setStep("main")}
+                  className="mt-4 text-xs text-amber-100/50 underline underline-offset-4"
+                >
+                  ← back
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
