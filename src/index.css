@@ -246,7 +246,7 @@ html[data-theme="stars"] body::before {
 .bloom-svg { filter: drop-shadow(0 0 18px rgba(244, 63, 94, 0.55)); }
 html[data-theme="stars"] .bloom-svg { filter: drop-shadow(0 0 22px rgba(245, 158, 11, 0.6)); }
 
-/* ---- secret page: night sky ---- */
+/* ---- night sky accents (stars, shimmer) ---- */
 .twinkle-star {
   position: absolute;
   border-radius: 9999px;

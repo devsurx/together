@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import DoodleCanvas from "./components/DoodleCanvas.jsx";
-import SecretPage from "./components/SecretPage.jsx";
 import { LockScreen, LockSettings } from "./components/AppLock.jsx";
 import Onboarding from "./components/Onboarding.jsx";
 import Splash from "./components/Splash.jsx";
@@ -349,15 +348,6 @@ export default function App() {
       setPairBusy(false);
     }
   };
-
-  // Secret surprise route — opens instantly, always its own night sky.
-  if (
-    typeof window !== "undefined" &&
-    (window.location.pathname.replace(/\/+$/, "") === "/aishwarya" ||
-      window.location.hash === "#/aishwarya")
-  ) {
-    return <SecretPage />;
-  }
 
   if (!booted) {
     return <Splash quote={quote} />;

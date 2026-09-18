@@ -28,8 +28,6 @@ Three simple tabs. Nothing else.
 
 **Design** — romantic, moody, a little magical: black canvas, rose/pink gradient accents, lily motif with bloom/fade/petal/ripple animations, staggered card entrances. Two themes: 🌸 Lilies and 🌟 Starry night (golden, switch in Settings). IST-locked (Asia/Kolkata) — no timezone pickers, no clock math.
 
-**Secret:** `/aishwarya` — a hidden starry surprise page. Shh. 💛
-
 ## 🛠 Tech stack
 
 | Layer | Choice |
