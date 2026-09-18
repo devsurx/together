@@ -26,8 +26,8 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   if (payload.notification) return;
   const d = payload.data || {};
-  self.registration.showNotification(d.title || "Together 💗", {
-    body: d.body || "Today's prompt is waiting for both of you.",
+  self.registration.showNotification(d.title || "together", {
+    body: d.body || "You have something new waiting.",
     icon: "/icon.svg",
     badge: "/lily.svg",
     data: { url: d.link || "/" },

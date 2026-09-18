@@ -104,20 +104,21 @@ for (const row of await q.json()) {
   const parts = localParts(now, tz);
   if (!parts || parts.hm !== rt || last === parts.date) continue;
 
-  const body = `Today's prompt: ${promptForDate(parts.date)}`;
+  // Discreet by design: vague, no names, no hearts — safe on any lock screen.
+  const body = "Your daily note is ready";
   const send = await fetch(FCM_URL, {
     method: "POST",
     headers: H,
     body: JSON.stringify({
       message: {
         token: fcm,
-        notification: { title: "Together 💗", body },
+        notification: { title: "together", body },
         webpush: {
           headers: { Urgency: "normal" },
           notification: { icon: "/icon.svg", badge: "/lily.svg" },
           fcm_options: { link: "/" },
         },
-        data: { title: "Together 💗", body, link: "/" },
+        data: { title: "together", body, link: "/" },
       },
     }),
   });
@@ -203,23 +204,19 @@ for (const u of usersSeen) {
   const moodOf = (id) => ups[id]?.mapValue?.fields?.mood?.stringValue;
   if (moodOf(u.uid) || !moodOf(other)) continue; // done, or nothing to save
 
-  let partnerName = "Your person";
-  const on = await fetch(`${DB}/documents/users/${other}`, { headers: H });
-  if (on.ok) partnerName = str((await on.json()).fields || {}, "name") || partnerName;
-
-  const riskBody = `${partnerName} already checked in — 30 seconds to save the streak`;
+  const riskBody = "A quick check-in is waiting";
   const send2 = await fetch(FCM_URL, {
     method: "POST",
     headers: H,
     body: JSON.stringify({
       message: {
         token: fcm,
-        notification: { title: "Together 🔥", body: riskBody },
+        notification: { title: "together", body: riskBody },
         webpush: {
           notification: { icon: "/icon.svg", badge: "/lily.svg" },
           fcm_options: { link: "/" },
         },
-        data: { title: "Together 🔥", body: riskBody, link: "/" },
+        data: { title: "together", body: riskBody, link: "/" },
       },
     }),
   });

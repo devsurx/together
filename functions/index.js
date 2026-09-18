@@ -67,18 +67,19 @@ exports.dailyReminder = onSchedule({ schedule: "every 15 minutes", timeZone: "Ut
     const parts = localParts(now, u.timezone);
     if (!parts || parts.hm !== u.reminderTime || u.lastReminded === parts.date) continue;
 
-    const body = `Today's prompt: ${promptForDate(parts.date)}`;
+    // Discreet by design: vague wording, safe on any lock screen.
+    const body = "Your daily note is ready";
     jobs.push(
       messaging
         .send({
           token: u.fcmToken,
-          notification: { title: "Together 💗", body },
+          notification: { title: "together", body },
           webpush: {
             headers: { Urgency: "normal" },
             notification: { icon: "/icon.svg", badge: "/lily.svg" },
             fcm_options: { link: "/" },
           },
-          data: { title: "Together 💗", body, link: "/" },
+          data: { title: "together", body, link: "/" },
         })
         .then(() => doc.ref.update({ lastReminded: parts.date }).catch(() => {}))
         .catch((e) => {

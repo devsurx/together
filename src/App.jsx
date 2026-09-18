@@ -244,10 +244,10 @@ export default function App() {
     if (!state.me?.reminderTime) return;
     if (reminderRef.current) reminderRef.current();
     reminderRef.current = scheduleLocalReminder(state.me.reminderTime, () => {
-      say("🌸 Daily prompt is ready — open Together!");
+      say("Your daily note is ready");
       try {
         if (Notification.permission === "granted") {
-          new Notification("Together 💗", { body: "Today's prompt is waiting for both of you." });
+          new Notification("together", { body: "Your daily note is ready" });
         }
       } catch { /* noop */ }
     });
@@ -283,7 +283,7 @@ export default function App() {
     onForegroundMessage((payload) => {
       if (stopped || lockedRef.current) return;
       const d = payload?.data || payload?.notification || {};
-      say(`💗 ${d.body || d.title || "Something from your person"}`);
+      say(`${d.body || d.title || "Something new is waiting"}`);
       burst();
     })
       .then((off) => {
@@ -1084,24 +1084,39 @@ export default function App() {
                 />
                 <button
                   onClick={async () => {
+                    if (!("Notification" in window)) {
+                      say("This browser can't do notifications");
+                      return;
+                    }
+                    if (Notification.permission === "denied") {
+                      say("Notifications are blocked — allow them in site settings, then retry");
+                      return;
+                    }
                     const r = await requestReminderPermission();
                     if (r !== "granted") {
-                      say(`Notifications: ${r}`);
+                      say("Tap Allow when asked, then retry");
                       return;
                     }
                     say("Reminders on 🔔");
                     if (fbMode) {
+                      let token = "";
                       try {
-                        const token = await getFcmToken();
-                        await fbWriteMe(me.uid, { fcmToken: token, reminderTime: me.reminderTime || "09:00" });
-                        say("Push registered on this device 📲");
-                        try {
-                          localStorage.setItem("together.v1.push", "1");
-                        } catch { /* noop */ }
-                        setPushOn(true);
-                      } catch {
-                        say("Couldn't turn on push for this device yet");
+                        token = await getFcmToken();
+                      } catch (e) {
+                        say(`Push setup hiccup (${e?.code || "token"}) — fully close + reopen, then retry`);
+                        return;
                       }
+                      try {
+                        await fbWriteMe(me.uid, { fcmToken: token, reminderTime: me.reminderTime || "09:00" });
+                      } catch {
+                        say("Saved on this phone, cloud save failed — retry in a bit");
+                        return;
+                      }
+                      say("Push registered on this device 📲");
+                      try {
+                        localStorage.setItem("together.v1.push", "1");
+                      } catch { /* noop */ }
+                      setPushOn(true);
                     }
                   }}
                   className="ml-auto rounded-xl border border-line px-3 py-1.5 text-xs text-zinc-300"
