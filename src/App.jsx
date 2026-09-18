@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import DoodleCanvas from "./components/DoodleCanvas.jsx";
+import { LockScreen, LockSettings } from "./components/AppLock.jsx";
 import Onboarding from "./components/Onboarding.jsx";
 import Splash from "./components/Splash.jsx";
 import {
@@ -13,6 +14,7 @@ import {
 } from "./lib/content.js";
 import { isFirebaseConfigured, getFcmToken, onForegroundMessage, requestReminderPermission, scheduleLocalReminder } from "./lib/firebase.js";
 import { fbCreatePair, fbJoinPair, fbWriteDay, fbWriteMe, fbWritePair, loadFbLink, startSync } from "./lib/sync.js";
+import { hashPin, makeSalt } from "./lib/lock.js";
 import { applyStreak, createPair, freshState, loadState, saveState } from "./lib/store.js";
 
 function timeAgo(ts) {
@@ -189,6 +191,17 @@ export default function App() {
   const [bucketDraft, setBucketDraft] = useState("");
   const [showHelp, setShowHelp] = useState(false);
   const [pairBusy, setPairBusy] = useState(false);
+  const [locked, setLocked] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("together.v1.state"))?.lock?.enabled || false;
+    } catch {
+      return false;
+    }
+  });
+  const [unlockError, setUnlockError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  const lockedRef = useRef(false);
+  lockedRef.current = locked;
   const fbMode = isFirebaseConfigured;
 
   const burst = () => setBurstKey((k) => k + 1);
@@ -247,7 +260,7 @@ export default function App() {
         reminderTime: state.me.reminderTime || "09:00",
       },
       setState,
-      notify: { toast: say, burst },
+      notify: { toast: (m) => { if (!lockedRef.current) say(m); }, burst },
       setOnline: () => {},
     });
     return stop;
@@ -260,7 +273,7 @@ export default function App() {
     let stopped = false;
     let offFg = null;
     onForegroundMessage((payload) => {
-      if (stopped) return;
+      if (stopped || lockedRef.current) return;
       const d = payload?.data || payload?.notification || {};
       say(`💗 ${d.body || d.title || "Something from your person"}`);
       burst();
@@ -333,6 +346,49 @@ export default function App() {
 
   if (!booted) {
     return <Splash quote={quote} />;
+  }
+
+  // ---- app lock ----
+  const verifyPin = (pin) =>
+    hashPin(pin, state.lock?.salt || "").then((h) => h === state.lock?.hash);
+
+  const tryUnlock = async (pin) => {
+    const ok = await verifyPin(pin);
+    if (ok) {
+      setLocked(false);
+      setUnlockError("");
+    } else {
+      setAttempt((a) => a + 1);
+      setUnlockError("Wrong PIN — try again");
+    }
+  };
+
+  const enableLock = async (pin) => {
+    const salt = makeSalt();
+    const hash = await hashPin(pin, salt);
+    patch((s) => {
+      s.lock = { enabled: true, hash, salt };
+      return s;
+    });
+    say("App lock on 🔒");
+  };
+
+  const disableLock = async () => {
+    patch((s) => {
+      s.lock = { enabled: false, hash: "", salt: "" };
+      return s;
+    });
+    say("App lock off");
+  };
+
+  const eraseAll = () => {
+    setState(freshState());
+    setLocked(false);
+    setUnlockError("");
+  };
+
+  if (locked) {
+    return <LockScreen attempt={attempt} error={unlockError} onPin={tryUnlock} onErase={eraseAll} />;
   }
 
   // ---------- Pairing gate ----------
@@ -1026,6 +1082,21 @@ export default function App() {
                 >
                   enable 🔔
                 </button>
+              </div>
+              <div className="mt-4 rounded-2xl border border-line bg-coal p-3">
+                <div className="text-xs font-bold text-zinc-200">
+                  🔒 App lock {state.lock?.enabled ? "is on" : "is off"}
+                </div>
+                <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+                  Hides everything behind a 4-digit PIN on this phone. Keeps casual snoopers out.
+                </p>
+                <LockSettings
+                  enabled={state.lock?.enabled}
+                  verify={verifyPin}
+                  onEnable={enableLock}
+                  onDisable={disableLock}
+                  onLockNow={() => setLocked(true)}
+                />
               </div>
               {installEvt && (
                 <button

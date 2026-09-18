@@ -99,6 +99,13 @@ canvas.doodle-surface {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-8px); }
 }
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(3px); }
+  30%, 50%, 70% { transform: translateX(-5px); }
+  40%, 60% { transform: translateX(5px); }
+}
+.anim-shake { animation: shake 0.45s ease both; }
 
 /* staggered entrance for every card on every tab */
 main > div > section { animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
