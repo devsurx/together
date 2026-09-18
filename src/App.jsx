@@ -376,7 +376,6 @@ export default function App() {
   const activeR = dayResponses[activeUid];
   const bothAnswered = Boolean(meR?.answer && partnerR?.answer);
   const bothCheckedIn = Boolean(meR?.mood && partnerR?.mood);
-  const myMood = meR?.mood;
 
   const daysToVisit = (() => {
     if (!state.visit.date) return null;
@@ -489,7 +488,7 @@ export default function App() {
           <Lily size={30} />
           <div className="leading-tight">
             <div className="font-display text-lg text-rose-50">together</div>
-            <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">{dateKey} · {promptForDate(dateKey).slice(0, 0) /* keep */}day {pair.streakCount} 🔥</div>
+            <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">{dateKey} · day {pair.streakCount} 🔥</div>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <div className="flex rounded-full border border-line bg-card p-0.5 text-[11px]">
