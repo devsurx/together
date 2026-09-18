@@ -80,9 +80,14 @@ export const CONVERSATION_LIBRARY = [
 
 export const MOODS = [
   { id: "glowing", emoji: "🥰", label: "glowing" },
+  { id: "excited", emoji: "🤩", label: "excited" },
   { id: "good", emoji: "😊", label: "good" },
+  { id: "calm", emoji: "😌", label: "calm" },
   { id: "okay", emoji: "😐", label: "okay" },
+  { id: "tired", emoji: "😴", label: "tired" },
   { id: "low", emoji: "😔", label: "low" },
+  { id: "stressed", emoji: "😩", label: "stressed" },
+  { id: "sick", emoji: "🤒", label: "sick" },
   { id: "rough", emoji: "😭", label: "rough" },
 ];
 

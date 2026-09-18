@@ -189,7 +189,6 @@ export default function App() {
   const [bucketDraft, setBucketDraft] = useState("");
   const [showHelp, setShowHelp] = useState(false);
   const [pairBusy, setPairBusy] = useState(false);
-  const [fbOnline, setFbOnline] = useState(false);
   const fbMode = isFirebaseConfigured;
 
   const burst = () => setBurstKey((k) => k + 1);
@@ -249,7 +248,7 @@ export default function App() {
       },
       setState,
       notify: { toast: say, burst },
-      setOnline: setFbOnline,
+      setOnline: () => {},
     });
     return stop;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -604,21 +603,12 @@ export default function App() {
           <Lily size={30} />
           <div className="leading-tight">
             <div className="font-display title-gradient text-lg">together</div>
-            <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">
-              {dateKey} · day {pair.streakCount} 🔥 ·{" "}
-              {fbMode ? (
-                <span className={fbOnline ? "text-emerald-300" : "text-zinc-500"}>
-                  {fbOnline ? "● live sync" : "○ offline"}
-                </span>
-              ) : (
-                <span>demo mode</span>
-              )}
-            </div>
+            <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">{dateKey}</div>
           </div>
           <div className="ml-auto flex items-center gap-2">
             {fbMode ? (
               <span className="rounded-full border border-line bg-card px-3 py-1 text-[11px] font-semibold text-zinc-300">
-                you are {me.name}
+                {me.name}
               </span>
             ) : (
               <div className="flex rounded-full border border-line bg-card p-0.5 text-[11px]">
