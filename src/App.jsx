@@ -59,8 +59,7 @@ function Lily({ size = 40, bloom = false }) {
   );
 }
 
-function SectionTitle({ kicker, title, right }) {
-  return (
+function SectionTitle({ kicker, title, right }) {  return (
     <div className="mb-3 flex items-end justify-between">
       <div>
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-rose-300/80">{kicker}</div>
@@ -68,6 +67,26 @@ function SectionTitle({ kicker, title, right }) {
       </div>
       {right}
     </div>
+  );
+}
+
+// 3 simple states; legacy values map to busy so old data still reads well.
+const STATUS_META = {
+  free: { dot: "bg-emerald-400", label: "free" },
+  busy: { dot: "bg-amber-400", label: "busy" },
+  sleeping: { dot: "bg-violet-400", label: "sleeping" },
+  working: { dot: "bg-amber-400", label: "busy" },
+  driving: { dot: "bg-amber-400", label: "busy" },
+  out: { dot: "bg-amber-400", label: "busy" },
+};
+
+function StatusWord({ v }) {
+  const m = STATUS_META[v] || { dot: "bg-zinc-500", label: v || "…" };
+  return (
+    <span className="font-semibold text-zinc-100">
+      <span className={`mr-1 inline-block h-2 w-2 rounded-full ${m.dot}`} />
+      {m.label}
+    </span>
   );
 }
 
@@ -575,8 +594,6 @@ export default function App() {
     } catch { /* noop */ }
   };
 
-  const lastNudge = state.nudges[0];
-
   return (
     <Chrome glance={glancePanel}>
     <div className="min-h-svh w-full bg-ink pb-28">
@@ -632,7 +649,7 @@ export default function App() {
                 {pair.forgiveUsed && <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-rose-200">grace used 💧</span>}
               </div>
               <div className="text-[11px] text-zinc-400">
-                {bothCheckedIn ? "Both checked in — see you tomorrow 🌙" : "Both moods = +1 day. One miss is forgiven."}
+                {bothCheckedIn ? "Done for today — see you tomorrow 🌙" : "Check in together every day to grow it"}
               </div>
             </div>
             <Lily size={30} bloom={bothCheckedIn} />
@@ -643,7 +660,7 @@ export default function App() {
       <main className="px-4 pt-4">
         {tab === "today" && (
           <div className="anim-bloom-in space-y-4" key={dateKey + tab}>
-            <p className="text-center text-xs italic text-rose-200/70">answering as <b>{activeName}</b> (demo switch in header)</p>
+            {!fbMode && <p className="text-center text-xs italic text-rose-200/70">answering as <b>{activeName}</b> — tap a name above to switch</p>}
 
             {/* daily prompt */}
             <section className="rounded-3xl border border-line bg-card p-5">
@@ -770,10 +787,7 @@ export default function App() {
               >
                 💓
               </button>
-              <p className="mt-3 text-xs text-zinc-400">
-                tap to buzz {partner?.name || "your partner"} instantly
-                {lastNudge && <span className="block mt-1">last: {lastNudge.fromName} · {timeAgo(lastNudge.at)}</span>}
-              </p>
+              <p className="mt-3 text-xs text-zinc-400">tap to send {partner?.name || "your partner"} a buzz 💓</p>
               {/* virtual lamp */}
               <button
                 onClick={() => {
@@ -787,7 +801,7 @@ export default function App() {
                 }}
                 className={`mt-4 w-full rounded-2xl border py-3 text-sm font-semibold ${state.lamp.litBy ? "border-amber-300/50 bg-amber-300/10 text-amber-200" : "border-line bg-coal text-zinc-300"}`}
               >
-                {state.lamp.litBy ? `💡 lamp is lit ${state.lamp.litBy === activeUid ? "by you" : `by ${(state.lamp.litBy === me.uid ? me.name : partner?.name)}`} — tap to dim` : "🏮 tap to light our lamp"}
+                {state.lamp.litBy ? `💡 lit — tap to dim` : "🏮 light our lamp"}
               </button>
             </section>
 
@@ -796,15 +810,10 @@ export default function App() {
               <SectionTitle kicker="presence" title="Are they free?" />
               <div className="rounded-2xl border border-line bg-coal p-4 text-center">
                 <div className="text-sm text-zinc-200">
-                  {me.name} is <b className="text-rose-200">{me.status}</b>
-                  {" · "}
-                  {partner?.name || "partner"} is <b className="text-rose-200">{partner?.status || "…"}</b>
+                  {me.name} is <StatusWord v={me.status} /> · {partner?.name || "partner"} is{" "}
+                  <StatusWord v={partner?.status} />
                 </div>
-                <div className="mt-1 text-[11px] text-zinc-500">no need to ask “are you busy?” 💛</div>
-              </div>
-              <div className="mt-3 flex items-center gap-2 text-xs">
-                <span className="text-zinc-400">{activeName} is…</span>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="mt-3 flex flex-wrap justify-center gap-1.5">
                   {STATUSES.map((st) => {
                     const cur = state.viewingAs === "partner" && partner ? partner.status : me.status;
                     return (
@@ -818,17 +827,16 @@ export default function App() {
                           });
                           if (fbMode) void fbWriteMe(activeUid, { status: st }).catch(() => {});
                         }}
-                        className={`rounded-full px-2.5 py-1 font-semibold ${cur === st ? "bg-rose-600 text-white" : "border border-line text-zinc-400"}`}
+                        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${cur === st ? "bg-rose-600 text-white" : "border border-line text-zinc-400"}`}
                       >
-                        {st}
+                        <span className={`h-2 w-2 rounded-full ${STATUS_META[st].dot}`} />
+                        {STATUS_META[st].label}
                       </button>
                     );
                   })}
                 </div>
+                <div className="mt-2 text-[11px] text-zinc-500">set yours so they know 💛</div>
               </div>
-              <p className="mt-2 text-[11px] text-zinc-500">
-                {me.name} is <b className="text-zinc-300">{me.status}</b> · {partner?.name || "partner"} is <b className="text-zinc-300">{partner?.status || "…"}</b> — no need to ask “are you busy?”
-              </p>
             </section>
 
             {/* doodle */}
@@ -907,7 +915,10 @@ export default function App() {
 
             {/* journal */}
             <section className="rounded-3xl border border-line bg-card p-5">
-              <SectionTitle kicker="notes" title="Little notes" />
+              <details>
+                <summary className="cursor-pointer list-none">
+                  <SectionTitle kicker="notes" title={`Little notes${state.journal.length ? ` (${state.journal.length})` : ""}`} />
+                </summary>
               <div className="flex gap-2">
                 <input
                   value={journalDraft}
@@ -940,11 +951,15 @@ export default function App() {
                 ))}
                 {state.journal.length === 0 && <li className="text-xs text-zinc-500">Empty page. Write the first line of today. ✍️</li>}
               </ul>
+              </details>
             </section>
 
             {/* bucket */}
             <section className="rounded-3xl border border-line bg-card p-5">
-              <SectionTitle kicker="dreams" title="Someday list" />
+              <details>
+                <summary className="cursor-pointer list-none">
+                  <SectionTitle kicker="dreams" title={`Someday list${state.bucket.length ? ` (${state.bucket.length})` : ""}`} />
+                </summary>
               <div className="flex gap-2">
                 <input
                   value={bucketDraft}
@@ -984,6 +999,7 @@ export default function App() {
                 ))}
                 {state.bucket.length === 0 && <li className="text-xs text-zinc-500">No dreams listed yet — add one date idea for “when we're together”.</li>}
               </ul>
+              </details>
             </section>
 
             {/* settings */}
@@ -1061,6 +1077,12 @@ export default function App() {
                 <p className="mt-3 text-[11px] text-zinc-600">
                   {isFirebaseConfigured ? "Synced privately between your two phones 💞" : "Demo mode: everything stays on this phone."}
                 </p>
+                <button
+                  onClick={() => setShowHelp(true)}
+                  className="mt-2 w-full rounded-xl border border-line py-2 text-zinc-300"
+                >
+                  replay tutorial 🌸
+                </button>
               </details>
             </section>
           </div>

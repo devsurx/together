@@ -86,7 +86,7 @@ export const MOODS = [
   { id: "rough", emoji: "😭", label: "rough" },
 ];
 
-export const STATUSES = ["free", "working", "sleeping", "driving", "out"];
+export const STATUSES = ["free", "busy", "sleeping"];
 
 export const HOME_TZ = "Asia/Kolkata";
 
