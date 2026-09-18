@@ -444,9 +444,9 @@ export default function App() {
           </button>
           )}
           <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
-            Real backend: invite codes map to <span className="text-zinc-300">pairs/{`{pairId}`}</span> in Firestore with
-            realtime sync + FCM. This build runs fully offline in demo mode
-            {isFirebaseConfigured ? " — Firebase env detected." : " (set VITE_FIREBASE_* to go live)."}
+            {isFirebaseConfigured
+              ? "Synced privately between your two phones 💞"
+              : "Demo mode: everything stays on this phone."}
           </p>
         </div>
         {toast && (
@@ -648,8 +648,8 @@ export default function App() {
             {/* daily prompt */}
             <section className="rounded-3xl border border-line bg-card p-5">
               <SectionTitle
-                kicker="daily prompt"
-                title="One question, two hearts"
+                kicker="today's ritual"
+                title="One question"
                 right={<span className="text-[11px] text-zinc-500">{bothAnswered ? "🌸 revealed" : "🔒 locked"}</span>}
               />
               <p className="font-display text-lg leading-snug text-rose-50">“{prompt}”</p>
@@ -700,14 +700,14 @@ export default function App() {
                       <div className="mt-1 text-sm leading-relaxed text-zinc-100">{dayResponses[p.uid]?.answer}</div>
                     </div>
                   ))}
-                  <p className="text-center text-[11px] text-zinc-500">simultaneous reveal 🌸 +3 pts each</p>
+                  <p className="text-center text-[11px] text-zinc-500">revealed together 🌸</p>
                 </div>
               )}
             </section>
 
             {/* mood */}
             <section className="rounded-3xl border border-line bg-card p-5">
-              <SectionTitle kicker="mood check-in" title={`How is ${activeName} today?`} />
+              <SectionTitle kicker="how are you?" title={`How is ${activeName} feeling?`} />
               <div className="grid grid-cols-5 gap-2">
                 {MOODS.map((m) => (
                   <button
@@ -772,7 +772,7 @@ export default function App() {
               </button>
               <p className="mt-3 text-xs text-zinc-400">
                 tap to buzz {partner?.name || "your partner"} instantly
-                {lastNudge && <span className="block mt-1">last: {lastNudge.fromName} · {timeAgo(lastNudge.at)} (+2 pts)</span>}
+                {lastNudge && <span className="block mt-1">last: {lastNudge.fromName} · {timeAgo(lastNudge.at)}</span>}
               </p>
               {/* virtual lamp */}
               <button
@@ -831,13 +831,9 @@ export default function App() {
               </p>
             </section>
 
-          </div>
-        )}
-
-        {tab === "doodle" && (
-          <div className="anim-bloom-in space-y-4" key={tab}>
+            {/* doodle */}
             <section className="rounded-3xl border border-line bg-card p-5">
-              <SectionTitle kicker="doodle tab ✍️" title={`Scribble for ${partner?.name || "your love"}`} />
+              <SectionTitle kicker="quick scribble ✍️" title={`Draw something for ${partner?.name || "your love"}`} />
               <DoodleCanvas
                 onSend={(img, caption) => {
                   patch((s) => {
@@ -852,7 +848,7 @@ export default function App() {
               />
             </section>
             <section className="rounded-3xl border border-line bg-card p-5">
-              <SectionTitle kicker="scrapbook" title={`Shared feed (${state.doodles.length})`} />
+              <SectionTitle kicker="keepsakes" title={`Our wall (${state.doodles.length})`} />
               {state.doodles.length === 0 && <p className="text-xs text-zinc-500">No doodles yet — draw a crooked heart. It counts. 💗</p>}
               <div className="space-y-3">
                 {state.doodles.map((d) => (
@@ -885,7 +881,7 @@ export default function App() {
               )}
               {daysToVisit !== null && daysToVisit < 0 && <p className="text-sm">💗 You were together recently — add the next one!</p>}
               <p className="mt-3 text-[11px] text-zinc-500">
-                🌸 together you've earned {(state.points[me.uid] || 0) + (partner ? state.points[partner.uid] || 0 : 0)} pts for this trip
+                🌸 every check-in brings this trip closer
               </p>
               <div className="mt-3 flex gap-2">
                 <input
@@ -911,7 +907,7 @@ export default function App() {
 
             {/* journal */}
             <section className="rounded-3xl border border-line bg-card p-5">
-              <SectionTitle kicker="journal" title="Photo-less timeline (v1)" />
+              <SectionTitle kicker="notes" title="Little notes" />
               <div className="flex gap-2">
                 <input
                   value={journalDraft}
@@ -948,7 +944,7 @@ export default function App() {
 
             {/* bucket */}
             <section className="rounded-3xl border border-line bg-card p-5">
-              <SectionTitle kicker="someday" title="Bucket list 🪣" />
+              <SectionTitle kicker="dreams" title="Someday list" />
               <div className="flex gap-2">
                 <input
                   value={bucketDraft}
@@ -1038,37 +1034,34 @@ export default function App() {
                   Install Together to home screen 📲
                 </button>
               )}
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                <button
-                  onClick={() => {
-                    const code = makeInviteCode();
-                    patch((s) => { s.pair.inviteCode = code; return s; });
-                    say("New invite code generated 🔗");
-                  }}
-                  className="rounded-xl border border-line py-2 text-zinc-300"
-                >
-                  regenerate code 🔗
-                </button>
-                <button
-                  onClick={() => {
-                    if (!window.confirm("Reset demo data?")) return;
-                    const f = freshState();
-                    setState(f);
-                  }}
-                  className="rounded-xl border border-red-500/40 py-2 text-red-300"
-                >
-                  reset demo
-                </button>
-              </div>
-              <button
-                onClick={() => setShowHelp(true)}
-                className="mt-2 w-full rounded-xl border border-line py-2 text-zinc-300"
-              >
-                how does this work? replay tutorial 🌸
-              </button>
-              <p className="mt-3 text-[11px] text-zinc-600">
-                Pair <span className="text-zinc-400">{pair.pairId}</span> · invite <b className="tracking-[0.2em] text-zinc-300">{pair.inviteCode}</b> · backend: {isFirebaseConfigured ? "Firebase ✓" : "local demo"} · FCM: local stand-in (see src/lib/firebase.js)
-              </p>
+              <details className="mt-3 rounded-xl border border-line p-3">
+                <summary className="cursor-pointer text-xs font-semibold text-zinc-400">Advanced</summary>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <button
+                    onClick={() => {
+                      const code = makeInviteCode();
+                      patch((s) => { s.pair.inviteCode = code; return s; });
+                      say("New invite code generated 🔗");
+                    }}
+                    className="rounded-xl border border-line py-2 text-zinc-300"
+                  >
+                    regenerate code 🔗
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!window.confirm("Reset demo data?")) return;
+                      const f = freshState();
+                      setState(f);
+                    }}
+                    className="rounded-xl border border-red-500/40 py-2 text-red-300"
+                  >
+                    reset demo
+                  </button>
+                </div>
+                <p className="mt-3 text-[11px] text-zinc-600">
+                  {isFirebaseConfigured ? "Synced privately between your two phones 💞" : "Demo mode: everything stays on this phone."}
+                </p>
+              </details>
             </section>
           </div>
         )}
@@ -1076,11 +1069,10 @@ export default function App() {
 
       {/* bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-line/70 bg-ink/95 backdrop-blur lg:left-1/2 lg:right-auto lg:w-full lg:max-w-md lg:-translate-x-1/2 lg:rounded-t-[1.75rem] lg:border lg:border-b-0 lg:border-line/70 lg:shadow-[0_-12px_60px_-15px_rgba(244,63,94,0.4)]">
-        <div className="mx-auto grid w-full max-w-md grid-cols-4 px-2 pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto grid w-full max-w-md grid-cols-3 px-2 pb-[env(safe-area-inset-bottom)]">
           {[
             { id: "today", icon: "🌸", label: "Today" },
             { id: "connect", icon: "💓", label: "Connect" },
-            { id: "doodle", icon: "✍️", label: "Doodle" },
             { id: "us", icon: "🌙", label: "Us" },
           ].map((t) => (
             <button
