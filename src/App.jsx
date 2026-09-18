@@ -377,10 +377,7 @@ export default function App() {
             placeholder="e.g. Aishwarya"
             className="mt-2 w-full rounded-xl border border-line bg-coal px-3 py-2.5 text-sm outline-none placeholder:text-zinc-600 focus:border-rose-500"
           />
-          <div className="mt-4 flex items-center justify-between rounded-xl border border-line bg-coal px-3 py-2.5 text-sm">
-            <span className="text-zinc-400">your timezone</span>
-            <span className="font-semibold text-rose-200">🇮🇳 IST · Kolkata</span>
-          </div>
+          {/* timezone locked to IST — nothing to pick 🇮🇳 */}
 
           {pairTab === "join" && (
             <>
