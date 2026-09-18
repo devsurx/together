@@ -152,3 +152,33 @@ main > div > section:nth-child(6) { animation-delay: 0.35s; }
     transition-duration: 0.001s !important;
   }
 }
+
+/* ---- final polish: ambient glow, depth, focus, accordions ---- */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 38% at 50% -5%, rgba(244, 63, 94, 0.13), transparent 70%),
+    radial-gradient(50% 28% at 92% 108%, rgba(236, 72, 153, 0.08), transparent 70%);
+}
+#root { position: relative; z-index: 1; }
+
+main section.rounded-3xl {
+  box-shadow: 0 24px 50px -32px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(244, 63, 94, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.15);
+  outline: none;
+}
+
+::selection { background: rgba(244, 63, 94, 0.45); color: #fff; }
+
+details > summary { list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
+.chev { display: inline-block; transition: transform 0.25s ease; }
+details[open] > summary .chev { transform: rotate(90deg); }

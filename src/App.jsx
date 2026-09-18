@@ -13,7 +13,7 @@ import {
 } from "./lib/content.js";
 import { isFirebaseConfigured, getFcmToken, onForegroundMessage, requestReminderPermission, scheduleLocalReminder } from "./lib/firebase.js";
 import { fbCreatePair, fbJoinPair, fbWriteDay, fbWriteMe, fbWritePair, loadFbLink, startSync } from "./lib/sync.js";
-import { applyStreak, createPair, freshState, loadState, makeInviteCode, saveState } from "./lib/store.js";
+import { applyStreak, createPair, freshState, loadState, saveState } from "./lib/store.js";
 
 function timeAgo(ts) {
   if (!ts) return "never";
@@ -641,7 +641,7 @@ export default function App() {
         </div>
         {/* streak banner */}
         <div className="px-4 pb-3 pt-2">
-          <div className="flex items-center gap-3 rounded-2xl border border-rose-500/25 bg-gradient-to-r from-rose-950/60 to-card px-4 py-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-rose-500/25 bg-gradient-to-r from-rose-950/60 to-card px-4 py-3 shadow-[0_10px_40px_-12px_rgba(244,63,94,0.5)]">
             <span className={`text-3xl ${pair.streakCount > 0 ? "anim-flicker" : "anim-float-soft"}`}>{pair.streakCount > 0 ? "🔥" : "🌱"}</span>
             <div className="flex-1">
               <div className="text-sm font-bold text-rose-50">
@@ -663,7 +663,8 @@ export default function App() {
             {!fbMode && <p className="text-center text-xs italic text-rose-200/70">answering as <b>{activeName}</b> — tap a name above to switch</p>}
 
             {/* daily prompt */}
-            <section className="rounded-3xl border border-line bg-card p-5">
+            <section className="relative overflow-hidden rounded-3xl border border-line bg-card p-5">
+              <img src="/lily.svg" alt="" aria-hidden draggable={false} className="anim-float-soft pointer-events-none absolute -right-5 -top-5 w-28 opacity-15" />
               <SectionTitle
                 kicker="today's ritual"
                 title="One question"
@@ -730,7 +731,7 @@ export default function App() {
                   <button
                     key={m.id}
                     onClick={() => setMood(m.id)}
-                    className={`rounded-2xl border py-3 text-2xl transition active:scale-90 ${activeR?.mood === m.id ? "border-rose-500 bg-rose-600/20 scale-105" : "border-line bg-coal"}`}
+                    className={`rounded-2xl border py-3 text-2xl transition active:scale-90 ${activeR?.mood === m.id ? "border-transparent bg-gradient-to-b from-rose-500 to-pink-600 shadow-lg shadow-rose-950 scale-110" : "border-line bg-coal"}`}
                     title={m.label}
                   >
                     {m.emoji}
@@ -827,7 +828,7 @@ export default function App() {
                           });
                           if (fbMode) void fbWriteMe(activeUid, { status: st }).catch(() => {});
                         }}
-                        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${cur === st ? "bg-rose-600 text-white" : "border border-line text-zinc-400"}`}
+                        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${cur === st ? "border-transparent bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-md shadow-rose-950" : "border border-line text-zinc-400"}`}
                       >
                         <span className={`h-2 w-2 rounded-full ${STATUS_META[st].dot}`} />
                         {STATUS_META[st].label}
@@ -881,7 +882,7 @@ export default function App() {
               {daysToVisit === null && <p className="text-xs text-zinc-400">Set the date you're together again.</p>}
               {daysToVisit !== null && daysToVisit >= 0 && (
                 <div className="py-2">
-                  <div className="font-display text-6xl text-rose-50">{daysToVisit}</div>
+                  <div className="font-display title-gradient text-6xl">{daysToVisit}</div>
                   <div className="text-xs uppercase tracking-[0.3em] text-rose-200">days to go</div>
                   {daysToVisit <= 7 && <div className="mt-2 text-sm">🎉 so close — milestone unlocked!</div>}
                   {daysToVisit > 7 && daysToVisit <= 30 && <div className="mt-2 text-sm">🌙 one month energy — plan one date idea.</div>}
@@ -917,7 +918,7 @@ export default function App() {
             <section className="rounded-3xl border border-line bg-card p-5">
               <details>
                 <summary className="cursor-pointer list-none">
-                  <SectionTitle kicker="notes" title={`Little notes${state.journal.length ? ` (${state.journal.length})` : ""}`} />
+                  <SectionTitle kicker="notes" title={`Little notes${state.journal.length ? ` (${state.journal.length})` : ""}`} right={<span className="chev text-lg text-rose-300">›</span>} />
                 </summary>
               <div className="flex gap-2">
                 <input
@@ -958,7 +959,7 @@ export default function App() {
             <section className="rounded-3xl border border-line bg-card p-5">
               <details>
                 <summary className="cursor-pointer list-none">
-                  <SectionTitle kicker="dreams" title={`Someday list${state.bucket.length ? ` (${state.bucket.length})` : ""}`} />
+                  <SectionTitle kicker="dreams" title={`Someday list${state.bucket.length ? ` (${state.bucket.length})` : ""}`} right={<span className="chev text-lg text-rose-300">›</span>} />
                 </summary>
               <div className="flex gap-2">
                 <input
@@ -1030,7 +1031,7 @@ export default function App() {
                         await fbWriteMe(me.uid, { fcmToken: token, reminderTime: me.reminderTime || "09:00" });
                         say("Push registered on this device 📲");
                       } catch {
-                        say("Push needs HTTPS + VAPID key in .env");
+                        say("Couldn't turn on push for this device yet");
                       }
                     }
                   }}
@@ -1051,27 +1052,20 @@ export default function App() {
                 </button>
               )}
               <details className="mt-3 rounded-xl border border-line p-3">
-                <summary className="cursor-pointer text-xs font-semibold text-zinc-400">Advanced</summary>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-zinc-400">
+                  <span>Advanced</span>
+                  <span className="chev text-base text-zinc-500">›</span>
+                </summary>
+                <div className="mt-3 grid grid-cols-1 gap-2 text-xs">
                   <button
                     onClick={() => {
-                      const code = makeInviteCode();
-                      patch((s) => { s.pair.inviteCode = code; return s; });
-                      say("New invite code generated 🔗");
-                    }}
-                    className="rounded-xl border border-line py-2 text-zinc-300"
-                  >
-                    regenerate code 🔗
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!window.confirm("Reset demo data?")) return;
+                      if (!window.confirm("Erase everything on this phone and start over?")) return;
                       const f = freshState();
                       setState(f);
                     }}
                     className="rounded-xl border border-red-500/40 py-2 text-red-300"
                   >
-                    reset demo
+                    erase everything & start over
                   </button>
                 </div>
                 <p className="mt-3 text-[11px] text-zinc-600">
@@ -1091,7 +1085,7 @@ export default function App() {
 
       {/* bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-line/70 bg-ink/95 backdrop-blur lg:left-1/2 lg:right-auto lg:w-full lg:max-w-md lg:-translate-x-1/2 lg:rounded-t-[1.75rem] lg:border lg:border-b-0 lg:border-line/70 lg:shadow-[0_-12px_60px_-15px_rgba(244,63,94,0.4)]">
-        <div className="mx-auto grid w-full max-w-md grid-cols-3 px-2 pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto grid w-full max-w-md grid-cols-3 gap-1 p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
           {[
             { id: "today", icon: "🌸", label: "Today" },
             { id: "connect", icon: "💓", label: "Connect" },
@@ -1100,11 +1094,10 @@ export default function App() {
             <button
               key={t.id}
               onClick={() => { setTab(t.id); window.scrollTo({ top: 0 }); }}
-              className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-semibold ${tab === t.id ? "text-rose-300" : "text-zinc-500"}`}
+              className={`flex flex-col items-center gap-0.5 rounded-2xl py-2 text-[11px] font-semibold transition ${tab === t.id ? "bg-rose-500/15 text-rose-200" : "text-zinc-500"}`}
             >
-              <span className="text-xl">{t.icon}</span>
+              <span key={t.id + String(tab === t.id)} className={`text-xl ${tab === t.id ? "anim-pop" : ""}`}>{t.icon}</span>
               {t.label}
-              {tab === t.id && <span className="h-1 w-6 rounded-full bg-rose-500" />}
             </button>
           ))}
         </div>
