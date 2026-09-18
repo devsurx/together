@@ -189,3 +189,96 @@ details > summary { list-style: none; }
 details > summary::-webkit-details-marker { display: none; }
 .chev { display: inline-block; transition: transform 0.25s ease; }
 details[open] > summary .chev { transform: rotate(90deg); }
+
+/* ---- themes: lilies (default) vs golden starry night ---- */
+/* Tailwind v4 builds utilities from these vars, so overriding them re-skins
+   the whole app at once. `html[data-theme]` beats `:root` on specificity. */
+html[data-theme="stars"] {
+  --color-ink: #070b18;
+  --color-coal: #0d1428;
+  --color-card: #101a33;
+  --color-line: #26335e;
+  --color-blush: #fde68a;
+  --color-rose-50: #fffbeb;
+  --color-rose-100: #fef3c7;
+  --color-rose-200: #fde68a;
+  --color-rose-300: #fcd34d;
+  --color-rose-500: #f59e0b;
+  --color-rose-600: #d97706;
+  --color-rose-700: #b45309;
+  --color-pink-300: #fcd34d;
+  --color-pink-500: #f59e0b;
+}
+html[data-theme="stars"] body::before {
+  background:
+    radial-gradient(1px 1px at 12% 22%, #fff, transparent),
+    radial-gradient(1px 1px at 32% 68%, #fde68a, transparent),
+    radial-gradient(1.5px 1.5px at 52% 12%, #fff, transparent),
+    radial-gradient(1px 1px at 68% 42%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 82% 72%, #fde68a, transparent),
+    radial-gradient(1px 1px at 90% 18%, #fff, transparent),
+    radial-gradient(1px 1px at 8% 82%, #fff, transparent),
+    radial-gradient(2px 2px at 44% 52%, #fef3c7, transparent),
+    radial-gradient(60% 40% at 50% -5%, rgba(245, 158, 11, 0.14), transparent 70%),
+    radial-gradient(50% 30% at 92% 108%, rgba(245, 158, 11, 0.08), transparent 70%);
+  animation: starfield-twinkle 4s ease-in-out infinite;
+}
+@keyframes starfield-twinkle {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+
+/* ---- blooming lily loader ---- */
+.bloom-petal {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: bloom-pulse 2.8s ease-in-out infinite;
+}
+@keyframes bloom-pulse {
+  0%, 100% { transform: scale(0.55); opacity: 0.55; }
+  50% { transform: scale(1); opacity: 1; }
+}
+.bloom-core { animation: core-glow 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes core-glow {
+  0%, 100% { transform: scale(0.85); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+.bloom-svg { filter: drop-shadow(0 0 18px rgba(244, 63, 94, 0.55)); }
+html[data-theme="stars"] .bloom-svg { filter: drop-shadow(0 0 22px rgba(245, 158, 11, 0.6)); }
+
+/* ---- secret page: night sky ---- */
+.twinkle-star {
+  position: absolute;
+  border-radius: 9999px;
+  background: #fff;
+  animation: twinkle 3s ease-in-out infinite;
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+.shoot {
+  position: absolute;
+  top: 12%;
+  left: -10%;
+  width: 140px;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(253, 230, 138, 0), #fde68a);
+  transform: rotate(-18deg);
+  animation: shoot-across 7s linear infinite;
+}
+@keyframes shoot-across {
+  0%, 88% { transform: translateX(0) rotate(-18deg); opacity: 0; }
+  90% { opacity: 1; }
+  97%, 100% { transform: translateX(120vw) rotate(-18deg); opacity: 0; }
+}
+.type-caret::after {
+  content: "▍";
+  margin-left: 2px;
+  color: #fcd34d;
+  animation: caret-blink 0.9s steps(1) infinite;
+}
+@keyframes caret-blink {
+  50% { opacity: 0; }
+}

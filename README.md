@@ -26,7 +26,9 @@ Three simple tabs. Nothing else.
 - 📝 Little notes journal + someday list (tucked into accordions)
 - 🔔 Daily reminder time + notification setup, install prompt, first-run tutorial
 
-**Design** — romantic, moody, a little magical: black canvas, rose/pink gradient accents, lily motif with bloom/fade/petal/ripple animations, staggered card entrances. IST-locked (Asia/Kolkata) — no timezone pickers, no clock math.
+**Design** — romantic, moody, a little magical: black canvas, rose/pink gradient accents, lily motif with bloom/fade/petal/ripple animations, staggered card entrances. Two themes: 🌸 Lilies and 🌟 Starry night (golden, switch in Settings). IST-locked (Asia/Kolkata) — no timezone pickers, no clock math.
+
+**Secret:** `/aishwarya` — a hidden starry surprise page. Shh. 💛
 
 ## 🛠 Tech stack
 

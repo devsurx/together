@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import DoodleCanvas from "./components/DoodleCanvas.jsx";
+import SecretPage from "./components/SecretPage.jsx";
 import { LockScreen, LockSettings } from "./components/AppLock.jsx";
 import Onboarding from "./components/Onboarding.jsx";
 import Splash from "./components/Splash.jsx";
@@ -216,7 +217,7 @@ export default function App() {
   }, [state]);
 
   useEffect(() => {
-    const t = setTimeout(() => setBooted(true), 1500);
+    const t = setTimeout(() => setBooted(true), 1900);
     const tick = setInterval(() => setNow(Date.now()), 1000);
     const onBip = (e) => {
       e.preventDefault();
@@ -298,6 +299,11 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fbMode, state.pair?.pairId]);
 
+  // App theme (lilies ↔ starry night) → <html data-theme>.
+  useEffect(() => {
+    document.documentElement.dataset.theme = state.theme === "stars" ? "stars" : "lilies";
+  }, [state.theme]);
+
   const patch = (fn) => setState((s) => fn(structuredClone(s)));
 
   const showOnboarding = booted && (!state.seenTutorial || showHelp);
@@ -343,6 +349,15 @@ export default function App() {
       setPairBusy(false);
     }
   };
+
+  // Secret surprise route — opens instantly, always its own night sky.
+  if (
+    typeof window !== "undefined" &&
+    (window.location.pathname.replace(/\/+$/, "") === "/aishwarya" ||
+      window.location.hash === "#/aishwarya")
+  ) {
+    return <SecretPage />;
+  }
 
   if (!booted) {
     return <Splash quote={quote} />;
@@ -1097,6 +1112,27 @@ export default function App() {
                   onDisable={disableLock}
                   onLockNow={() => setLocked(true)}
                 />
+              </div>
+              <div className="mt-4 rounded-2xl border border-line bg-coal p-3">
+                <div className="text-xs font-bold text-zinc-200">✨ App theme</div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {[
+                    { id: "lilies", label: "🌸 Lilies" },
+                    { id: "stars", label: "🌟 Starry night" },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => patch((s) => { s.theme = t.id; return s; })}
+                      className={`rounded-xl py-2 text-xs font-bold transition active:scale-95 ${
+                        (state.theme || "lilies") === t.id
+                          ? "border-transparent bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-md shadow-rose-950"
+                          : "border border-line text-zinc-400"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               {installEvt && (
                 <button

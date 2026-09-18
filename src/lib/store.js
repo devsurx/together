@@ -30,6 +30,7 @@ export function freshState() {
     points: {}, // { [uid]: number }
     seenTutorial: false,
     lock: { enabled: false, hash: "", salt: "" },
+    theme: "lilies", // 'lilies' | 'stars'
     viewingAs: "me", // 'me' | 'partner' — demo switch to simulate both phones
     activity: [], // recent event feed strings {id, text, at}
   };
