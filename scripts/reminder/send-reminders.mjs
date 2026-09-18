@@ -68,8 +68,9 @@ const auth = new GoogleAuth({
     "https://www.googleapis.com/auth/firebase.messaging",
   ],
 });
-const { token } = await auth.getAccessToken();
-const H = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+console.log("target project:", projectId);
+const client = await auth.getClient();
+const H = { ...(await client.getRequestHeaders()), "Content-Type": "application/json" };
 const now = Date.now();
 
 const q = await fetch(
