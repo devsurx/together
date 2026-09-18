@@ -81,7 +81,7 @@ On your phone open the hosted URL → **Share → Add to Home Screen**. Reminder
 ### 2. Local config (never committed)
 
 ```bash
-cp .env.example .env   # fill in the 5 values
+cp .env.example .env   # fill in the 6 values
 ```
 
 Also paste the same 4 web-config values into `public/firebase-messaging-sw.js` where marked (FCM requires that file at the site root; web keys are public by design).

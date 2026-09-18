@@ -1,12 +1,13 @@
 // Firebase Cloud Messaging service worker — handles pushes while the app
 // is closed. FCM requires this exact filename at the site root.
 //
-// ▼▼▼ SETUP: paste the SAME 4 values from your .env below ▼▼▼
+// ▼▼▼ SETUP: paste the SAME values from your .env below ▼▼▼
 // (Firebase web keys are public by design — safe to commit.)
-//   VITE_FIREBASE_API_KEY      → apiKey
-//   VITE_FIREBASE_AUTH_DOMAIN  → authDomain
-//   VITE_FIREBASE_PROJECT_ID   → projectId
-//   VITE_FIREBASE_APP_ID       → appId
+//   VITE_FIREBASE_API_KEY             → apiKey
+//   VITE_FIREBASE_AUTH_DOMAIN         → authDomain
+//   VITE_FIREBASE_PROJECT_ID          → projectId
+//   VITE_FIREBASE_APP_ID              → appId
+//   VITE_FIREBASE_MESSAGING_SENDER_ID → messagingSenderId
 
 importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
@@ -16,6 +17,7 @@ firebase.initializeApp({
   authDomain: "together-couples-3f56f.firebaseapp.com",
   projectId: "together-couples-3f56f",
   appId: "1:284290462881:web:fa8fe20b430d0825b1ece0",
+  messagingSenderId: "284290462881",
 });
 
 const messaging = firebase.messaging();
