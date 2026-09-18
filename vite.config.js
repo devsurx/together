@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'lily.svg', 'icon.svg'],
       manifest: {
-        name: 'Together — for long-distance couples',
-        short_name: 'Together',
+        name: 'together',
+        short_name: 'together',
         description: 'One daily prompt, one mood check-in, one streak. A tiny daily ritual for two.',
         theme_color: '#0a0a0c',
         background_color: '#0a0a0c',
