@@ -173,6 +173,7 @@ export default function App() {
   const [bucketDraft, setBucketDraft] = useState("");
   const [songDraft, setSongDraft] = useState("");
   const [showHelp, setShowHelp] = useState(false);
+  const [pairBusy, setPairBusy] = useState(false);
   const [fbOnline, setFbOnline] = useState(false);
   const fbMode = isFirebaseConfigured;
 
@@ -288,6 +289,7 @@ export default function App() {
   // Firebase pairing (replaces local invite codes when configured).
   const fbPairingSubmit = async () => {
     if (!formName.trim() || (pairTab === "join" && joinCode.trim().length < 4)) return;
+    setPairBusy(true);
     try {
       const res =
         pairTab === "create"
@@ -310,6 +312,8 @@ export default function App() {
       say(pairTab === "create" ? "Invite created — share your code 💌" : "Paired! 💞");
     } catch (e) {
       say(e?.message || "Pairing failed — check connection");
+    } finally {
+      setPairBusy(false);
     }
   };
 
@@ -377,7 +381,7 @@ export default function App() {
           )}
 
           <button
-            disabled={!formName.trim() || (pairTab === "join" && joinCode.trim().length < 4)}
+            disabled={!formName.trim() || (pairTab === "join" && joinCode.trim().length < 4) || pairBusy}
             onClick={async () => {
               if (fbMode) {
                 await fbPairingSubmit();
@@ -418,7 +422,7 @@ export default function App() {
             }}
             className="mt-5 w-full rounded-2xl bg-rose-600 py-3 text-sm font-bold text-white disabled:opacity-40 active:scale-[0.98]"
           >
-            {pairTab === "create" ? "Create our space 💗" : "Join with code 🔗"}
+            {pairBusy ? "working… ⏳" : pairTab === "create" ? "Create our space 💗" : "Join with code 🔗"}
           </button>
 
           {!fbMode && (
@@ -448,6 +452,11 @@ export default function App() {
             {isFirebaseConfigured ? " — Firebase env detected." : " (set VITE_FIREBASE_* to go live)."}
           </p>
         </div>
+        {toast && (
+          <div className="anim-bloom-in fixed bottom-24 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-full border border-rose-500/30 bg-black/90 px-4 py-2 text-xs font-semibold text-rose-100 shadow-xl">
+            {toast}
+          </div>
+        )}
         {showOnboarding && <Onboarding onClose={() => closeTutorial("Welcome in 💗")} />}
       </div>
       </Chrome>
