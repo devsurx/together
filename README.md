@@ -4,25 +4,29 @@ A lightweight, mobile-first **Progressive Web App (PWA)** for long-distance coup
 
 > "Miles apart, synced at heart."
 
+**Live:** https://together-couples-3f56f.web.app — open on both phones, one creates an invite code, the other joins.
+
 ## ✨ Features
 
-**Core daily loop (MVP)**
-- 📝 **Daily prompt** — one shared question per day; answers stay locked until *both* partners respond, then reveal simultaneously
-- 😊 **Mood check-in** — a quick emoji tap showing how each partner feels that day
-- 🔥 **Streak counter** — grows when both check in on the same day, with one forgiven miss (grace save)
+Three simple tabs. Nothing else.
 
-**Connection & presence**
-- 💓 **Thinking-of-you button** — instant buzz + petal burst for your partner
-- 🏮 **Shared lamp** — light it up and your partner sees it glowing
-- 🟢 **Live status** (free / working / sleeping / driving / out) — no more "are you busy?"
-- 🇮🇳 **IST-locked** — one timezone for everyone, zero clock math
+**🌸 Today — the daily ritual**
+- 📝 **One question** — a shared prompt every morning; answers stay locked until *both* respond, then reveal together
+- 😊 **Mood check-in** — one emoji tap each; both checking in grows the **🔥 streak** (one miss forgiven)
+- Invite-code pairing with a live `● live sync` / `○ offline` indicator in the header
 
-**Shared experience**
-- ✍️ **Doodle tab** — finger-drawn scribbles sent to a shared scrapbook feed
-- ✈️ **Visit countdown** with milestones, points system, journal timeline, bucket list
-- 🌸 **Onboarding tour + splash screen**, installable to the home screen with daily reminders
+**💓 Connect — feel close instantly**
+- Big **thinking-of-you button** (pulse + petals + gentle buzz on their phone)
+- 🏮 **Shared lamp** — light it, they see it glowing
+- 🟢 **Status** — free / busy / sleeping, so nobody has to ask "are you busy?"
+- ✍️ **Quick scribbles** — finger-drawn doodles on a shared wall
 
-**Design** — romantic, moody, a little magical: black canvas, rose/pink accents, lily-flower motif with bloom/fade/petal animations.
+**🌙 Us — looking forward**
+- ✈️ **Visit countdown** with milestones
+- 📝 Little notes journal + someday list (tucked into accordions)
+- 🔔 Daily reminder time + notification setup, install prompt, first-run tutorial
+
+**Design** — romantic, moody, a little magical: black canvas, rose/pink gradient accents, lily motif with bloom/fade/petal/ripple animations, staggered card entrances. IST-locked (Asia/Kolkata) — no timezone pickers, no clock math.
 
 ## 🛠 Tech stack
 
@@ -31,17 +35,23 @@ A lightweight, mobile-first **Progressive Web App (PWA)** for long-distance coup
 | Frontend | React 19 + Vite |
 | Styling | Tailwind CSS v4 |
 | PWA | `vite-plugin-pwa` (manifest + Workbox service worker) |
-| Backend (roadmap) | Firebase (Firestore + Auth + FCM) — app currently runs in **local demo mode**, no backend needed |
-| Push (roadmap) | Firebase Cloud Messaging; local reminder stand-in included |
+| Auth | Firebase Anonymous (one ID per phone, no login screen) |
+| Sync | Cloud Firestore realtime (`onSnapshot`) |
+| Push | Firebase Cloud Messaging + `firebase-messaging-sw.js` |
+| Daily reminder | GitHub Actions cron every 15 min (**$0, no Blaze/billing**) — `functions/` holds an equivalent Cloud Function as an optional path |
+| Without keys | App runs fully offline in local demo mode (header `You / Partner` toggle simulates both phones) |
 
-### Data model (mirrors the Firestore schema)
+### Firestore layout
 
 ```
-users/{uid}                  { name, partnerId, timezone, fcmToken }
-pairs/{pairId}               { user1, user2, streakCount, lastCheckIn }
-dailyPrompts/{date}          { question }
-responses/{pairId}/{date}/{uid}  { answer, mood, submittedAt }
+users/{uid}                 { name, timezone, status, reminderTime, fcmToken, lastReminded }
+pairs/{pairId}              { user1, user2, inviteCode, streakCount, lastCheckIn, forgiveUsed,
+                              lamp, lastNudge, song, visit }
+pairs/{pairId}/days/{date}  { updates: { {uid}: { answer, mood, at } } }
+invites/{CODE}              single-use join ticket { pairId, hostUid, ... } (deleted on claim)
 ```
+
+Local-only (this device): doodles, journal, bucket list, points, activity feed.
 
 ## 🚀 Getting started
 
@@ -54,40 +64,29 @@ npm run build    # production build + service worker
 npm run preview  # preview the production build
 ```
 
-**Demo tip:** the header `You / Partner` toggle simulates both phones — answer + check in as one, switch, then answer as the other to watch the locked → reveal → streak transition.
-
 ## 📲 Install as an app
 
-The production build is installable: on your phone open the hosted URL → **Share → Add to Home Screen**. Daily reminder time + notification permission live in the **Us → Settings** tab.
+On your phone open the hosted URL → **Share → Add to Home Screen**. Reminder time + notification permission live in **Us → Settings → enable 🔔** (tap once per phone to register for push).
 
-## 🔌 Going live with Firebase
-
-The app ships in **local demo mode**. To get true two-phone realtime sync + daily push, wire up Firebase (anonymous auth, Firestore, FCM) — **fully free, no billing/Blaze needed**: the daily reminder runs as a GitHub Actions cron instead of a Cloud Function.
-
-**What syncs vs what stays on-device:**
-
-| Synced (Firestore) | Local-only (this device) |
-|---|---|
-| profiles, pair core, moods + answers, nudges, lamp, song, visit countdown | doodles, journal, bucket list, points, activity feed |
+## 🔌 Backend setup (Firebase, free tier, no billing)
 
 ### 1. Console setup (~10 min)
 
-1. [console.firebase.google.com](https://console.firebase.google.com) → **Add project** → name it e.g. `together-couples` → turn **Analytics OFF** → Create.
+1. [console.firebase.google.com](https://console.firebase.google.com) → **Add project** → turn **Analytics OFF** → Create.
 2. **Build → Authentication → Get started → Sign-in method → Anonymous → Enable → Save.**
-3. **Build → Firestore Database → Create database → Start in production mode** → pick your region → Enable. Then open the **Rules** tab, paste `firestore.rules` from this repo → **Publish**. (Or deploy it via CLI in step 3 below.)
-4. **Project Overview → Add app ( `</>` )** → nickname `together-web` → Register (skip Hosting for now) → copy `apiKey`, `authDomain`, `projectId`, `appId`.
+3. **Build → Firestore Database → Create database → Start in production mode** → pick your region → Enable. Then the **Rules** tab → paste `firestore.rules` → **Publish** (or deploy via CLI below).
+4. **Project Overview → Add app (`</>`)** → nickname `together-web` → Register (skip Hosting) → copy `apiKey`, `authDomain`, `projectId`, `appId`.
 5. **Project settings → Cloud Messaging → Web Push certificates → Generate key pair** → copy the **VAPID key**.
-6. **Skip Blaze entirely** — the daily push runs via GitHub Actions (step 4), so no billing account is ever needed. (`functions/` holds an equivalent Cloud Function if you ever want the Blaze path later.)
 
 ### 2. Local config (never committed)
 
 ```bash
-cp .env.example .env   # then fill in the 5 values from step 1
+cp .env.example .env   # fill in the 5 values
 ```
 
 Also paste the same 4 web-config values into `public/firebase-messaging-sw.js` where marked (FCM requires that file at the site root; web keys are public by design).
 
-### 3. Deploy (your terminal)
+### 3. Deploy
 
 ```bash
 npm i -g firebase-tools
@@ -97,36 +96,38 @@ npm run build
 firebase deploy --only firestore:rules,hosting
 ```
 
-Your public URL (Hosting) is what both phones open — installable via **Share → Add to Home Screen**, and push-capable over HTTPS. Each phone taps **enable 🔔** in **Us → Settings** once to register for the daily prompt push (sent at each person's `reminderTime` in their own timezone).
+### 4. Free daily push (GitHub Actions)
 
-### 4. Free daily push (GitHub Actions, no Blaze)
+1. [console.cloud.google.com](https://console.cloud.google.com) → your project → **IAM & Admin → Service Accounts → Create** (`together-scheduler`, **Firebase Admin** role) → Done.
+2. Account → **Keys → Add key → JSON** (downloads a file).
+3. GitHub repo → **Settings → Secrets and variables → Actions → New secret** `FIREBASE_SERVICE_ACCOUNT` = entire JSON → Add.
+4. **Actions → daily-reminder → Run workflow** to test (runs every 15 min on its own).
 
-1. [console.cloud.google.com](https://console.cloud.google.com) → select your project → **IAM & Admin → Service Accounts → Create service account** → name `together-scheduler` → grant the **Firebase Admin** role → Done.
-2. Open the account → **Keys → Add key → Create new key → JSON** (downloads a file).
-3. GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**: name `FIREBASE_SERVICE_ACCOUNT`, value = the entire JSON file contents → Add secret.
-4. **Actions tab → daily-reminder → Run workflow** to test (it also runs every 15 min automatically).
+### 5. Two-phone flow
 
-That's it — due devices get the prompt push, `lastReminded` prevents duplicates, stale tokens are cleared automatically.
-
-### 4. Two-phone flow
-
-Phone A: **Create invite** → share the 6-letter code. Phone B: **Join partner** → enter code. Both answer + check in → reveal + streak sync live (`● live sync` in the header; `○ offline` means it fell back to local).
+Phone A: **Create invite** → share the 6-letter code. Phone B: **Join partner** → enter code. Answer + check in on both → reveal + streak sync live.
 
 ## 📁 Project structure
 
 ```
-public/                  icons, lily artwork, PWA assets
+public/                  icons, lily artwork, firebase-messaging-sw.js
 src/
   App.jsx                tabs, pairing gate, streak logic, desktop shell
-  index.css              Tailwind v4 theme + bloom/petal/drift animations
+  index.css              Tailwind v4 theme + rise/bloom/petal/ripple/flicker animations
   lib/
-    content.js           prompt pool, quotes, moods, timezones
-    store.js             local-first store (mirrors Firestore schema)
-    firebase.js          Firebase config stub + reminder helpers
+    content.js           prompt pool (32), quotes, moods, IST helpers
+    store.js             local-first store (demo mode + offline cache)
+    firebase.js          lazy SDK init, anon auth, FCM helpers
+    sync.js              realtime layer: pairing, listeners, write-through
   components/
-    Splash.jsx           staged boot splash screen
+    Splash.jsx           staged boot splash
     Onboarding.jsx       5-step first-run tutorial
     DoodleCanvas.jsx     shared drawing canvas
+scripts/reminder/        $0 cron push sender (Firestore REST + FCM HTTP v1)
+functions/               optional Blaze-path Cloud Function equivalent
+firestore.rules          members-only reads, single-use invite claims
+firebase.json            hosting (dist) + rules + functions wiring
+.github/workflows/       daily-reminder cron
 ```
 
 ## 📄 License
