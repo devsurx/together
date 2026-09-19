@@ -15,8 +15,11 @@ import {
   todayKey,
 } from "./lib/content.js";
 import { isFirebaseConfigured, hasVapid, getFcmToken, onForegroundMessage, requestReminderPermission, scheduleLocalReminder } from "./lib/firebase.js";
-import { fbCreatePair, fbJoinPair, fbWriteDay, fbWriteMe, fbWritePair, loadFbLink, startSync } from "./lib/sync.js";
+import { fbCreatePair, fbJoinPair, fbWriteDay, fbWriteMe, fbWritePair, fbDiag, loadFbLink, startSync } from "./lib/sync.js";
 import { hashPin, makeSalt } from "./lib/lock.js";
+
+// Bumped on every deploy — shown in the hidden lily-tap diagnostic.
+const APP_BUILD = "19e";
 import { applyStreak, createPair, freshState, loadState, saveState } from "./lib/store.js";
 
 function timeAgo(ts) {
@@ -218,6 +221,18 @@ export default function App() {
     setToast(t);
     window.clearTimeout(say._t);
     say._t = window.setTimeout(() => setToast(""), 2600);
+  };
+
+  // Hidden diagnostic: tap the header lily 5 times quickly to see sync health.
+  const tapTimes = useRef([]);
+  const lilyTap = () => {
+    const t = Date.now();
+    tapTimes.current = [...tapTimes.current.filter((x) => t - x < 3000), t];
+    if (tapTimes.current.length >= 5) {
+      tapTimes.current = [];
+      const age = fbDiag.snapAt ? `${Math.round((Date.now() - fbDiag.snapAt) / 1000)}s ago` : "never";
+      say(`build ${APP_BUILD} · heard ${age} · ${fbDiag.err ? `err ${fbDiag.err}` : "no err"} · member ${fbDiag.member}`);
+    }
   };
 
   useEffect(() => {
@@ -678,7 +693,9 @@ export default function App() {
       {/* header */}
       <header className="sticky top-0 z-30 border-b border-line/70 bg-ink/90 backdrop-blur">
         <div className="flex items-center gap-2 px-4 pt-4">
-          <Lily size={30} />
+          <span onClick={lilyTap} className="active:scale-90" title="together">
+            <Lily size={30} />
+          </span>
           <div className="leading-tight">
             <div className="font-display title-gradient text-lg">together</div>
             <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">{dateKey}</div>

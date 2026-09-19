@@ -31,6 +31,9 @@ export function saveFbLink(link) {
   }
 }
 
+// Last-known sync health, surfaced via the hidden 5-tap lily diagnostic.
+export const fbDiag = { uid: "", pairId: "", snapAt: 0, err: "", member: "?" };
+
 // ---------- pairing ----------
 
 export async function fbCreatePair(name, timezone) {
@@ -159,6 +162,10 @@ export function startSync({ pairId, meUid, meProfile, setState, notify, setOnlin
       });
     }
     saveFbLink({ uid, pairId });
+    fbDiag.uid = uid;
+    fbDiag.pairId = pairId;
+    fbDiag.err = "";
+    fbDiag.member = "?";
     await f
       .setDoc(
         f.doc(db, "users", uid),
@@ -177,6 +184,7 @@ export function startSync({ pairId, meUid, meProfile, setState, notify, setOnlin
     let lastNudgeAt = 0;
     let prevBoth = false;
     let missingToastShown = false;
+    let deniedToastShown = false;
 
     const otherUid = () => {
       if (!pairData) return null;
@@ -323,10 +331,22 @@ export function startSync({ pairId, meUid, meProfile, setState, notify, setOnlin
             return;
           }
           pairData = snap.data();
+          fbDiag.snapAt = Date.now();
+          fbDiag.err = "";
+          fbDiag.member = pairData.user1 === uid || pairData.user2 === uid ? "yes" : "no";
           setOnline(true);
           merge();
         },
-        () => setOnline(false)
+        (e) => {
+          fbDiag.err = e?.code || "listen-failed";
+          setOnline(false);
+          // This phone's identity isn't a pair member (e.g. auth was reset):
+          // reads can never succeed — say so plainly, once.
+          if (!deniedToastShown && fbDiag.err === "permission-denied") {
+            deniedToastShown = true;
+            notify.toast("This phone lost access to the pair. Get a fresh code and re-join 💞");
+          }
+        }
       )
     );
     on(() =>
@@ -337,7 +357,9 @@ export function startSync({ pairId, meUid, meProfile, setState, notify, setOnlin
           dayData = snap.exists() ? snap.data() : null;
           merge();
         },
-        () => {}
+        (e) => {
+          if (!fbDiag.err) fbDiag.err = e?.code || "day-listen-failed";
+        }
       )
     );
     cleanups.push(() => {
