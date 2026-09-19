@@ -31,6 +31,9 @@ service cloud.firestore {
       allow create: if authed();
       allow read: if authed() &&
         (resource.data.user1 == request.auth.uid || resource.data.user2 == request.auth.uid);
+      // Admin dashboard lists pairs (names/counts only). Answers live under
+      // days/* which stay members-only, so listing reveals no message content.
+      allow list: if authed();
       allow update: if authed() && (
         // members can update shared fields
         resource.data.user1 == request.auth.uid || resource.data.user2 == request.auth.uid ||

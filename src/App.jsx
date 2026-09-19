@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import DoodleCanvas from "./components/DoodleCanvas.jsx";
 import SecretPage from "./components/SecretPage.jsx";
+import AdminPage from "./components/AdminPage.jsx";
 import { LockScreen, LockSettings } from "./components/AppLock.jsx";
 import Onboarding from "./components/Onboarding.jsx";
 import Splash from "./components/Splash.jsx";
@@ -357,13 +358,15 @@ export default function App() {
     }
   };
 
-  // Secret surprise route — opens instantly, always its own night sky.
-  if (
-    typeof window !== "undefined" &&
-    (window.location.pathname.replace(/\/+$/, "") === "/aishwarya" ||
-      window.location.hash === "#/aishwarya")
-  ) {
-    return <SecretPage />;
+  // Secret surprise + developer routes (outside the app shell).
+  if (typeof window !== "undefined") {
+    const path = window.location.pathname.replace(/\/+$/, "");
+    if (path === "/aishwarya" || window.location.hash === "#/aishwarya") {
+      return <SecretPage />;
+    }
+    if (path === "/admin" || window.location.hash === "#/admin") {
+      return <AdminPage />;
+    }
   }
 
   if (!booted) {

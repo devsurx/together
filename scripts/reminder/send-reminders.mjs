@@ -10,27 +10,7 @@
 
 import { GoogleAuth } from "google-auth-library";
 
-// Compact pool (mirrors functions/index.js + src/lib/content.js).
-const PROMPTS = [
-  "What is one small thing I did lately that made you feel loved?",
-  "What are you most looking forward to doing together next visit?",
-  "What is something you've been missing about us this week?",
-  "Describe your perfect slow Sunday together, hour by hour.",
-  "What made you laugh today?",
-  "What is one win from today, however small?",
-  "What song reminds you of us right now, and why?",
-  "What do you need more of from me this week?",
-  "What time of day do you miss me most?",
-  "What would you cook for me if we were in the same kitchen tonight?",
-  "What is stressing you out that I can carry a little of?",
-  "What is a tiny habit we should start together, even apart?",
-];
-
-function promptForDate(dateKey) {
-  let h = 0;
-  for (let i = 0; i < dateKey.length; i++) h = (h * 31 + dateKey.charCodeAt(i)) >>> 0;
-  return PROMPTS[h % PROMPTS.length];
-}
+// (Prompt text lives in the app; pushes stay discreet by design.)
 
 function localParts(now, tz) {
   try {
