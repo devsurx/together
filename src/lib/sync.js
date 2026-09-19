@@ -72,7 +72,7 @@ export async function fbJoinPair(code, name, timezone) {
   const { db, f } = await getFirebaseAsync();
   const user = await ensureAnonAuth();
   const inv = await f.getDoc(f.doc(db, "invites", code));
-  if (!inv.exists()) throw new Error("Invite not found — check the code 🔍");
+  if (!inv.exists()) throw new Error("That invite didn't work. Double check the code 🔍");
   const { pairId } = inv.data();
   const pairRef = f.doc(db, "pairs", pairId);
   // Claim the empty user2 slot directly — reads are members-only, so no
@@ -80,7 +80,7 @@ export async function fbJoinPair(code, name, timezone) {
   try {
     await f.updateDoc(pairRef, { user2: user.uid, updatedAt: Date.now() });
   } catch (e) {
-    if (e?.code === "not-found") throw new Error("That pair is gone — ask for a fresh code");
+    if (e?.code === "not-found") throw new Error("That pair is gone. Ask for a fresh code");
     throw new Error("This invite is already paired 💞");
   }
   await f.deleteDoc(f.doc(db, "invites", code)).catch(() => {});
@@ -297,7 +297,7 @@ export function startSync({ pairId, meUid, meProfile, setState, notify, setOnlin
               if (ou) n.points[ou] = (n.points[ou] || 0) + 10;
               n.activity.unshift({
                 id: Date.now(),
-                text: `🔥 Streak day ${n.pair.streakCount} — both checked in`,
+                text: `🔥 Streak day ${n.pair.streakCount}. Both checked in`,
                 at: Date.now(),
               });
             }
@@ -318,7 +318,7 @@ export function startSync({ pairId, meUid, meProfile, setState, notify, setOnlin
             setOnline(false);
             if (!missingToastShown) {
               missingToastShown = true;
-              notify.toast("Pair not found in cloud — reset demo and re-pair 💞");
+              notify.toast("Pair not found in the cloud. Reset and pair again 💞");
             }
             return;
           }
@@ -350,7 +350,7 @@ export function startSync({ pairId, meUid, meProfile, setState, notify, setOnlin
   })().catch(() => {
     if (!stopped) {
       setOnline(false);
-      notify.toast("Couldn't reach Firebase — working offline");
+      notify.toast("Couldn't reach Firebase. Working offline for now");
     }
   });
 

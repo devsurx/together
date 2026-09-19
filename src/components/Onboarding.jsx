@@ -4,27 +4,27 @@ const STEPS = [
   {
     art: "🌸",
     title: "One prompt a day",
-    text: "You both get the same question every morning. Answers stay locked until you've both responded — then they bloom open together.",
+    text: "You both get the same question every morning. Nobody can peek. Once you've both answered, they open up together.",
   },
   {
     art: "😊",
     title: "Tap your mood, grow the streak",
-    text: "One emoji check-in each. When you both check in on the same day, your streak grows by one. Miss a day? You get one grace save.",
+    text: "One emoji check-in each. Do it on the same day and the streak grows. Slip once and you're forgiven.",
   },
   {
     art: "💓",
     title: "Feel close, instantly",
-    text: "Buzz them with Thinking-of-you, light your shared lamp, send a doodle — tiny touches for the hours between calls.",
+    text: "Buzz them when they're on your mind. Light the lamp. Send a silly little doodle. Small stuff for the hours between calls.",
   },
   {
     art: "✍️",
     title: "Scribble & countdown",
-    text: "Send quick doodles to the scrapbook, count down to your next visit, and collect points toward real plans together.",
+    text: "Keep a shared wall of scribbles. Count down the days till you're together again.",
   },
   {
     art: "📲",
     title: "Keep it on your home screen",
-    text: "Install Together like a real app and set a daily reminder — the whole ritual takes under a minute. Ready?",
+    text: "Add it to your home screen and set a daily reminder. The whole thing takes under a minute. Ready?",
   },
 ];
 

@@ -118,13 +118,13 @@ function DefaultGlance() {
       <div className="rounded-3xl border border-line bg-card p-5">
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-rose-300/80">why it works</div>
         <ul className="mt-2 space-y-2 text-xs leading-relaxed text-zinc-400">
-          <li>🌸 <b className="text-zinc-200">60 seconds a day</b> — built for busy days &amp; timezones.</li>
-          <li>🔒 <b className="text-zinc-200">Locked reveals</b> — answer honestly, no peeking.</li>
-          <li>🔥 <b className="text-zinc-200">Streaks + grace</b> — gentle, never guilty.</li>
+          <li>🌸 <b className="text-zinc-200">60 seconds a day</b>. Built for busy days and strange schedules.</li>
+          <li>🔒 <b className="text-zinc-200">Locked reveals</b>. Answer honestly. No peeking.</li>
+          <li>🔥 <b className="text-zinc-200">Streaks with grace</b>. Gentle. Never guilty.</li>
         </ul>
       </div>
       <div className="rounded-3xl border border-dashed border-rose-500/40 bg-card p-5 text-xs leading-relaxed text-rose-200">
-        📲 This is a PWA — on your phone, use <b>Share → Add to Home Screen</b> to install it like a native app.
+        📲 This is a PWA. On your phone, use <b>Share → Add to Home Screen</b> to install it like a normal app.
       </div>
     </div>
   );
@@ -349,9 +349,9 @@ export default function App() {
         return s;
       });
       burst();
-      say(pairTab === "create" ? "Invite created — share your code 💌" : "Paired! 💞");
+      say(pairTab === "create" ? "Invite created. Share your code 💌" : "Paired! 💞");
     } catch (e) {
-      say(e?.message || "Pairing failed — check connection");
+      say(e?.message || "Pairing failed. Check your connection and try again");
     } finally {
       setPairBusy(false);
     }
@@ -381,7 +381,7 @@ export default function App() {
       setUnlockError("");
     } else {
       setAttempt((a) => a + 1);
-      setUnlockError("Wrong PIN — try again");
+      setUnlockError("Wrong PIN. Try again");
     }
   };
 
@@ -488,7 +488,7 @@ export default function App() {
                   return s;
                 });
                 burst();
-                say("Invite created — share your code 💌");
+                say("Invite created. Share your code 💌");
               } else {
                 // Demo join: accept any code, pair immediately with a waiting slot.
                 const code = joinCode.trim().toUpperCase();
@@ -584,7 +584,7 @@ export default function App() {
       if (next.pair.lastCheckIn === dk && next.pair.streakCount !== before) {
         next.points[next.me.uid] = (next.points[next.me.uid] || 0) + 10;
         if (next.partner) next.points[next.partner.uid] = (next.points[next.partner.uid] || 0) + 10;
-        next.activity.unshift({ id: Date.now(), text: `🔥 Streak day ${next.pair.streakCount} — both checked in`, at: Date.now() });
+        next.activity.unshift({ id: Date.now(), text: `🔥 Streak day ${next.pair.streakCount}. Both checked in`, at: Date.now() });
       }
     }
     return next;
@@ -606,8 +606,8 @@ export default function App() {
           “{prompt}”
         </div>
         <div className="mt-2 flex justify-between text-xs text-zinc-400">
-          <span>{me.name}: {meR?.mood ? MOODS.find((m) => m.id === meR.mood)?.emoji : "—"}</span>
-          <span>{partner?.name || "partner"}: {partnerR?.mood ? MOODS.find((m) => m.id === partnerR.mood)?.emoji : "—"}</span>
+          <span>{me.name}: {meR?.mood ? MOODS.find((m) => m.id === meR.mood)?.emoji : "·"}</span>
+          <span>{partner?.name || "partner"}: {partnerR?.mood ? MOODS.find((m) => m.id === partnerR.mood)?.emoji : "·"}</span>
         </div>
       </div>
       {daysToVisit !== null && daysToVisit >= 0 && (
@@ -651,7 +651,7 @@ export default function App() {
     });
     setAnswerDraft("");
     burst();
-    say(bothAnswered ? "Both answers revealed! 🌸" : "Locked in — waiting on your partner 🔒");
+    say(bothAnswered ? "Both answers revealed! 🌸" : "Locked in. Waiting on your partner 🔒");
   };
 
   const nudge = () => {
@@ -662,7 +662,7 @@ export default function App() {
     });
     if (fbMode) void fbWritePair(pair.pairId, { lastNudge: { from: activeUid, fromName: activeName, at: Date.now() } }).catch(() => {});
     burst();
-    say("Thinking-of-you sent 💓");
+    say("Sent. That'll make them smile 💓");
     try {
       navigator.vibrate?.(40);
     } catch { /* noop */ }
@@ -714,7 +714,7 @@ export default function App() {
                 {pair.forgiveUsed && <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-rose-200">grace used 💧</span>}
               </div>
               <div className="text-[11px] text-zinc-400">
-                {bothCheckedIn ? "Done for today — see you tomorrow 🌙" : "Check in together every day to grow it"}
+                {bothCheckedIn ? "Done for today. See you tomorrow 🌙" : "Check in together every day to grow it"}
               </div>
             </div>
             <Lily size={30} bloom={bothCheckedIn} />
@@ -725,7 +725,7 @@ export default function App() {
       <main className="px-4 pt-4">
         {tab === "today" && (
           <div className="anim-bloom-in space-y-4" key={dateKey + tab}>
-            {!fbMode && <p className="text-center text-xs italic text-rose-200/70">answering as <b>{activeName}</b> — tap a name above to switch</p>}
+            {!fbMode && <p className="text-center text-xs italic text-rose-200/70">answering as <b>{activeName}</b>. Tap a name above to switch</p>}
 
             {/* daily prompt */}
             <section className="relative overflow-hidden rounded-3xl border border-line bg-card p-5">
@@ -749,12 +749,12 @@ export default function App() {
                   </div>
                   {!partner && (
                     <div className="mt-3 rounded-xl border border-dashed border-rose-500/40 p-3 text-xs text-rose-200">
-                      No partner linked yet — invite code <b className="tracking-[0.2em]">{pair.inviteCode}</b>. Add them below, or answer solo for now.
+                      No partner linked yet. Your invite code is <b className="tracking-[0.2em]">{pair.inviteCode}</b>. Add them below, or answer solo for now.
                     </div>
                   )}
                   {activeR?.answer ? (
                     <p className="mt-3 rounded-xl bg-black/40 p-3 text-center text-sm text-zinc-300">
-                      Your answer is sealed 🤫 — it reveals when you both answer.
+                      Your answer is sealed 🤫. It opens up once you've both answered.
                     </p>
                   ) : (
                     <div className="mt-3">
@@ -805,8 +805,8 @@ export default function App() {
                 ))}
               </div>
               <div className="mt-3 flex items-center justify-between text-[11px] text-zinc-500">
-                <span>{me.name}: {meR ? MOODS.find((m) => m.id === meR.mood)?.emoji : "—"}</span>
-                <span>{partner?.name || "partner"}: {partnerR ? MOODS.find((m) => m.id === partnerR.mood)?.emoji : "—"}</span>
+                <span>{me.name}: {meR ? MOODS.find((m) => m.id === meR.mood)?.emoji : "·"}</span>
+                <span>{partner?.name || "partner"}: {partnerR ? MOODS.find((m) => m.id === partnerR.mood)?.emoji : "·"}</span>
               </div>
             </section>
 
@@ -832,9 +832,9 @@ export default function App() {
             )}
             {!partner && fbMode && (
               <section className="rounded-3xl border border-dashed border-rose-500/40 bg-card p-5 text-center">
-                <div className="text-xs text-zinc-400">Share your invite code — your partner joins on their phone</div>
+                <div className="text-xs text-zinc-400">Share your invite code. Your partner joins on their phone</div>
                 <div className="font-display mt-1 text-3xl tracking-[0.3em] text-rose-200">{pair.inviteCode}</div>
-                <div className="mt-1 text-[11px] text-zinc-500">single-use · expires when claimed 💞</div>
+                <div className="mt-1 text-[11px] text-zinc-500">one time use only. Gone once claimed 💞</div>
               </section>
             )}
 
@@ -867,7 +867,7 @@ export default function App() {
                 }}
                 className={`mt-4 w-full rounded-2xl border py-3 text-sm font-semibold ${state.lamp.litBy ? "border-amber-300/50 bg-amber-300/10 text-amber-200" : "border-line bg-coal text-zinc-300"}`}
               >
-                {state.lamp.litBy ? `💡 lit — tap to dim` : "🏮 light our lamp"}
+                {state.lamp.litBy ? `💡 lit. Tap to dim` : "🏮 light our lamp"}
               </button>
             </section>
 
@@ -923,7 +923,7 @@ export default function App() {
             </section>
             <section className="rounded-3xl border border-line bg-card p-5">
               <SectionTitle kicker="keepsakes" title={`Our wall (${state.doodles.length})`} />
-              {state.doodles.length === 0 && <p className="text-xs text-zinc-500">No doodles yet — draw a crooked heart. It counts. 💗</p>}
+              {state.doodles.length === 0 && <p className="text-xs text-zinc-500">No doodles yet. Draw a crooked heart. It counts. 💗</p>}
               <div className="space-y-3">
                 {state.doodles.map((d) => (
                   <div key={d.id} className="overflow-hidden rounded-2xl border border-line">
@@ -949,11 +949,11 @@ export default function App() {
                 <div className="py-2">
                   <div className="font-display title-gradient text-6xl">{daysToVisit}</div>
                   <div className="text-xs uppercase tracking-[0.3em] text-rose-200">days to go</div>
-                  {daysToVisit <= 7 && <div className="mt-2 text-sm">🎉 so close — milestone unlocked!</div>}
-                  {daysToVisit > 7 && daysToVisit <= 30 && <div className="mt-2 text-sm">🌙 one month energy — plan one date idea.</div>}
+                  {daysToVisit <= 7 && <div className="mt-2 text-sm">🎉 So close. You unlocked a milestone!</div>}
+                  {daysToVisit > 7 && daysToVisit <= 30 && <div className="mt-2 text-sm">🌙 One month energy. Time to plan one date idea.</div>}
                 </div>
               )}
-              {daysToVisit !== null && daysToVisit < 0 && <p className="text-sm">💗 You were together recently — add the next one!</p>}
+              {daysToVisit !== null && daysToVisit < 0 && <p className="text-sm">💗 You were together recently. Add the next one!</p>}
               <p className="mt-3 text-[11px] text-zinc-500">
                 🌸 every check-in brings this trip closer
               </p>
@@ -1063,7 +1063,7 @@ export default function App() {
                     <span className={b.done ? "text-zinc-500 line-through" : "text-zinc-200"}>{b.text}</span>
                   </li>
                 ))}
-                {state.bucket.length === 0 && <li className="text-xs text-zinc-500">No dreams listed yet — add one date idea for “when we're together”.</li>}
+                {state.bucket.length === 0 && <li className="text-xs text-zinc-500">No dreams listed yet. Add one date idea for when you're together.</li>}
               </ul>
               </details>
             </section>
@@ -1089,7 +1089,7 @@ export default function App() {
                       return;
                     }
                     if (Notification.permission === "denied") {
-                      say("Notifications are blocked — allow them in site settings, then retry");
+                      say("Notifications are blocked. Allow them in site settings, then retry");
                       return;
                     }
                     const r = await requestReminderPermission();
@@ -1103,13 +1103,13 @@ export default function App() {
                       try {
                         token = await getFcmToken();
                       } catch (e) {
-                        say(`Push setup hiccup (${e?.code || "token"}) — fully close + reopen, then retry`);
+                        say(`Push setup hiccup (${e?.code || "token"}). Fully close and reopen, then retry`);
                         return;
                       }
                       try {
                         await fbWriteMe(me.uid, { fcmToken: token, reminderTime: me.reminderTime || "09:00" });
                       } catch {
-                        say("Saved on this phone, cloud save failed — retry in a bit");
+                        say("Saved on this phone. Cloud save failed, retry in a bit");
                         return;
                       }
                       say("Push registered on this device 📲");
@@ -1129,7 +1129,7 @@ export default function App() {
                 {pushOn ? (
                   <b className="text-emerald-300">on for this phone ✓</b>
                 ) : fbMode && !hasVapid ? (
-                  "not set up yet — coming soon"
+                  "not set up yet. Coming soon"
                 ) : (
                   "off"
                 )}
@@ -1263,7 +1263,7 @@ function PartnerForm({ onAdd }) {
           link 💞
         </button>
       </div>
-      <p className="mt-2 text-[11px] text-zinc-500">They're on IST too 🇮🇳 — no timezone math needed.</p>
+      <p className="mt-2 text-[11px] text-zinc-500">They're on IST too 🇮🇳. No timezone math, ever.</p>
     </div>
   );
 }

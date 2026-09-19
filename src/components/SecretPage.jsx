@@ -3,7 +3,7 @@ import LilyBloom from "./LilyBloom.jsx";
 import { loadState, saveState } from "../lib/store.js";
 
 const NOTE =
-  "Hi Aishwarya ✨\n\nThis tiny corner of the internet is only yours.\nSame sky, same stars — same us. 💛\n\n— forever yours";
+  "Hi Aishwarya ✨\n\nI made this little corner of the internet just for you.\nSame sky. Same stars. Same us. 💛\n\nForever yours";
 
 const REASONS = [
   "Your laugh fixes bad days. ☀️",
@@ -145,7 +145,7 @@ export default function SecretPage() {
           <div className="anim-bloom-in">
             <div className="mt-8 rounded-3xl border border-amber-200/20 bg-white/5 p-5 backdrop-blur">
               <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-200/80">
-                reasons, no. {reason + 1}
+                reasons I love you · no. {reason + 1}
               </div>
               <p key={reason} className="anim-bloom-in font-display mt-2 text-lg text-amber-50">
                 “{REASONS[reason]}”
@@ -168,7 +168,7 @@ export default function SecretPage() {
               send a hug 🤗
             </button>
             <p className="mt-2 text-[11px] text-amber-100/60">
-              {hugs === 0 ? "no hugs yet — fix that 👆" : `${hugs} hug${hugs === 1 ? "" : "s"} collected 💛`}
+              {hugs === 0 ? "No hugs yet. Fix that 👆" : `${hugs} hug${hugs === 1 ? "" : "s"} collected 💛`}
             </p>
 
             {step === "main" ? (
@@ -180,7 +180,7 @@ export default function SecretPage() {
               </button>
             ) : (
               <div className="anim-bloom-in mt-8">
-                <p className="text-sm text-amber-100/80">One last thing — how should our sky look?</p>
+                <p className="text-sm text-amber-100/80">One last thing. How should our sky look?</p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <button
                     onClick={() => chooseTheme("lilies")}

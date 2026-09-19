@@ -99,7 +99,7 @@ export function LockSettings({ enabled, verify, onEnable, onDisable, onLockNow }
     }
     if (mode === "set2" || mode === "change2") {
       if (pin !== first) {
-        setErr("PINs didn't match — start over");
+        setErr("Those PINs didn't match. Start over");
         setFirst("");
         setMode(mode === "set2" ? "set1" : "change1");
         return;
@@ -114,7 +114,7 @@ export function LockSettings({ enabled, verify, onEnable, onDisable, onLockNow }
     const ok = await verify(pin);
     setBusy(false);
     if (!ok) {
-      setErr("Wrong PIN — try again");
+        setErr("Wrong PIN. Try again");
       return;
     }
     if (mode === "check") {
