@@ -153,6 +153,9 @@ export default function AdminPage() {
       </div>
 
       {err ? <p className="mt-3 text-xs font-semibold text-red-300">{err}</p> : null}
+      {loading && !data ? (
+        <p className="mt-3 animate-pulse text-xs text-zinc-400">Loading data from Firebase…</p>
+      ) : null}
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[

@@ -684,6 +684,14 @@ export default function App() {
             <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">{dateKey}</div>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() => window.location.reload()}
+              aria-label="Refresh"
+              title="Refresh"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-card text-sm text-zinc-400 active:scale-90"
+            >
+              ⟳
+            </button>
             {fbMode ? (
               <span className="rounded-full border border-line bg-card px-3 py-1 text-[11px] font-semibold text-zinc-300">
                 {me.name}
